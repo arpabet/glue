@@ -7,6 +7,7 @@ package glue_test
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/schwid/glue"
+	"log"
 	"reflect"
 	"testing"
 )
@@ -19,11 +20,10 @@ type functionHolder struct {
 
 func TestPrimitiveFunctions(t *testing.T) {
 
-	glue.Verbose(true)
-
 	holder := &functionHolder{}
 
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		holder,
 		func() int { return 123 },
 		func() []string { return []string{"a", "b"} },
@@ -75,11 +75,10 @@ func TestFunctions(t *testing.T) {
 		return nil
 	})
 
-	glue.Verbose(true)
-
 	srv := &funcServiceImpl{}
 
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		clientBeans,
 		serverBeans,
 		srv,

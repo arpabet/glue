@@ -7,6 +7,7 @@ package glue_test
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/schwid/glue"
+	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -76,10 +77,9 @@ func TestMapRequiredByPointer(t *testing.T) {
 
 func TestArrayByPointer(t *testing.T) {
 
-	glue.Verbose(true)
-
 	// initialization order
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&elementX{name: "a"},
 		&elementX{name: "b"},
 		&elementX{name: "c"},
@@ -116,10 +116,9 @@ func TestArrayByPointer(t *testing.T) {
 
 func TestOrderedArrayByPointer(t *testing.T) {
 
-	glue.Verbose(true)
-
 	// initialization order
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&orderedElementX{name: "c"},
 		&orderedElementX{name: "a"},
 		&orderedElementX{name: "b"},
@@ -159,9 +158,8 @@ func TestOrderedArrayByPointer(t *testing.T) {
 
 func TestMapByPointer(t *testing.T) {
 
-	glue.Verbose(true)
-
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&elementX{name: "a"},
 		&elementX{name: "b"},
 		&elementX{name: "c"},
@@ -197,9 +195,8 @@ func TestMapByPointer(t *testing.T) {
 
 func TestMapDuplicatesByPointer(t *testing.T) {
 
-	glue.Verbose(true)
-
 	_, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&elementX{name: "a"},
 		&elementX{name: "a"},
 		&elementX{name: "b"},
@@ -292,10 +289,9 @@ func TestMapRequiredByInterface(t *testing.T) {
 
 func TestArrayByInterface(t *testing.T) {
 
-	glue.Verbose(true)
-
 	// initialization order
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&elementImpl{name: "a"},
 		&elementImpl{name: "b"},
 		&elementImpl{name: "c"},
@@ -331,9 +327,8 @@ func TestArrayByInterface(t *testing.T) {
 
 func TestOrderedArrayByInterface(t *testing.T) {
 
-	glue.Verbose(true)
-
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&orderedElementImpl{name: "c"},
 		&orderedElementImpl{name: "a"},
 		&orderedElementImpl{name: "b"},
@@ -369,10 +364,9 @@ func TestOrderedArrayByInterface(t *testing.T) {
 
 func TestMapByInterface(t *testing.T) {
 
-	glue.Verbose(true)
-
 	// initialization order
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&elementImpl{name: "a"},
 		&elementImpl{name: "b"},
 		&elementImpl{name: "c"},
@@ -403,10 +397,9 @@ func TestMapByInterface(t *testing.T) {
 
 func TestMapDuplicatesByInterface(t *testing.T) {
 
-	glue.Verbose(true)
-
 	// initialization order
 	_, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&elementImpl{name: "a"},
 		&elementImpl{name: "a"},
 		&elementImpl{name: "b"},

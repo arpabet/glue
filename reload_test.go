@@ -7,6 +7,7 @@ package glue_test
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/schwid/glue"
+	"log"
 	"reflect"
 	"testing"
 )
@@ -34,13 +35,12 @@ type topBean struct {
 
 func TestBeanReload(t *testing.T) {
 
-	glue.Verbose(true)
-
 	reBean := &reloadableBean{}
 	tBean := &topBean{}
 
 	// initialization order
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		reBean,
 		tBean,
 	)

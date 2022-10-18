@@ -5,6 +5,7 @@
 package glue
 
 import (
+	"log"
 	"net/http"
 	"reflect"
 )
@@ -328,3 +329,18 @@ type Resource interface {
 
 }
 
+/**
+Use this bean in context to operate verbose level during context creation.
+Best way is to use it first in context creation scan list.
+*/
+
+var VerboseClass = reflect.TypeOf((*Verbose)(nil))
+
+type Verbose struct {
+
+	/**
+	Use this logger to verbose
+	 */
+	Log  *log.Logger
+
+}

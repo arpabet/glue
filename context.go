@@ -7,6 +7,7 @@ package glue
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"log"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -14,14 +15,12 @@ import (
 	"sync"
 )
 
-/**
-Extended logs printed in console if enabled
-
-Only for testing purposes.
- */
-var verbose bool
-
 type context struct {
+
+	/**
+	Verbose logs if exist
+	 */
+	verbose *log.Logger
 
 	/**
 	Parent context if exist
@@ -53,10 +52,6 @@ type context struct {
 	Guarantees that context would be closed once
 	*/
 	destroyOnce sync.Once
-}
-
-func Verbose(value bool) {
-	verbose = value
 }
 
 func New(scan ...interface{}) (Context, error) {
@@ -111,29 +106,35 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 	err := forEach("", scan, func(pos string, obj interface{}) (err error) {
 
 		switch instance := obj.(type) {
+		case Verbose:
+			ctx.verbose = instance.Log
+			return nil
+		case *Verbose:
+			ctx.verbose = instance.Log
+			return nil
 		case ResourceSource:
-			if verbose {
-				fmt.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
+			if ctx.verbose != nil {
+				ctx.verbose.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
 			}
 			if err := ctx.registry.addResourceSource(&instance); err != nil {
 				return err
 			}
 			obj = &instance
 		case *ResourceSource:
-			if verbose {
-				fmt.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
+			if ctx.verbose != nil {
+				ctx.verbose.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
 			}
 			if err := ctx.registry.addResourceSource(instance); err != nil {
 				return err
 			}
 		case PropertySource:
-			if verbose {
-				fmt.Printf("PropertySource %s\n", instance.Path)
+			if ctx.verbose != nil {
+				ctx.verbose.Printf("PropertySource %s\n", instance.Path)
 			}
 			propertySources = append(propertySources, instance.Path)
 		case *PropertySource:
-			if verbose {
-				fmt.Printf("PropertySource %s\n", instance.Path)
+			if ctx.verbose != nil {
+				ctx.verbose.Printf("PropertySource %s\n", instance.Path)
 			}
 			propertySources = append(propertySources, instance.Path)
 		default:
@@ -163,7 +164,7 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 				elemClassPtr = factoryBean.ObjectType()
 			}
 
-			if verbose {
+			if ctx.verbose != nil {
 				if isFactoryBean {
 					var info string
 					if factoryBean.Singleton() {
@@ -173,15 +174,15 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 					}
 					objectName := factoryBean.ObjectName()
 					if objectName != "" {
-						fmt.Printf("FactoryBean %v produce %s %v with name '%s'\n", classPtr, info, elemClassPtr, objectName)
+						ctx.verbose.Printf("FactoryBean %v produce %s %v with name '%s'\n", classPtr, info, elemClassPtr, objectName)
 					} else {
-						fmt.Printf("FactoryBean %v produce %s %v\n", classPtr, info, elemClassPtr)
+						ctx.verbose.Printf("FactoryBean %v produce %s %v\n", classPtr, info, elemClassPtr)
 					}
 				} else {
 					if objBean.qualifier != "" {
-						fmt.Printf("Bean %v with name '%s'\n", classPtr, objBean.qualifier)
+						ctx.verbose.Printf("Bean %v with name '%s'\n", classPtr, objBean.qualifier)
 					} else {
-						fmt.Printf("Bean %v\n", classPtr)
+						ctx.verbose.Printf("Bean %v\n", classPtr)
 					}
 				}
 			}
@@ -196,7 +197,7 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 			if len(objBean.beanDef.fields) > 0 {
 				value := objBean.valuePtr.Elem()
 				for _, injectDef := range objBean.beanDef.fields {
-					if verbose {
+					if ctx.verbose != nil {
 						var attr []string
 						if injectDef.lazy {
 							attr = append(attr,  "lazy")
@@ -218,7 +219,7 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 						if injectDef.table {
 							prefix = "map[string]"
 						}
-						fmt.Printf("	Field %s%v %s\n", prefix, injectDef.fieldType, attrs)
+						ctx.verbose.Printf("	Field %s%v %s\n", prefix, injectDef.fieldType, attrs)
 					}
 					switch injectDef.fieldType.Kind() {
 					case reflect.Ptr:
@@ -266,8 +267,8 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 			registerBean(core, classPtr, objBean)
 		case reflect.Func:
 
-			if verbose {
-				fmt.Printf("Function %v\n", classPtr)
+			if ctx.verbose != nil {
+				ctx.verbose.Printf("Function %v\n", classPtr)
 			}
 
 			/*
@@ -304,8 +305,8 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 				ctx.registry.addBeanList(requiredType, direct[0].list)
 			}
 
-			if verbose {
-				fmt.Printf("Inject '%v' by pointer '%+v' in to %+v\n", requiredType, direct, injects)
+			if ctx.verbose != nil {
+				ctx.verbose.Printf("Inject '%v' by pointer '%+v' in to %+v\n", requiredType, direct, injects)
 			}
 
 			for _, inject := range injects {
@@ -316,15 +317,15 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 
 		} else {
 
-			if verbose {
-				fmt.Printf("Bean '%v' not found in context\n", requiredType)
+			if ctx.verbose != nil {
+				ctx.verbose.Printf("Bean '%v' not found in context\n", requiredType)
 			}
 
 			var required []*injection
 			for _, inject := range injects {
 				if inject.injectionDef.optional {
-					if verbose {
-						fmt.Printf("Skip optional inject '%v' in to '%v'\n", requiredType, inject)
+					if ctx.verbose != nil {
+						ctx.verbose.Printf("Skip optional inject '%v' in to '%v'\n", requiredType, inject)
 					}
 				} else {
 					required = append(required, inject)
@@ -344,15 +345,15 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 		candidates := ctx.searchCandidatesRecursive(ifaceType)
 		if len(candidates) == 0 {
 
-			if verbose {
-				fmt.Printf("No found bean candidates for interface '%v' in context\n", ifaceType)
+			if ctx.verbose != nil {
+				ctx.verbose.Printf("No found bean candidates for interface '%v' in context\n", ifaceType)
 			}
 
 			var required []*injection
 			for _, inject := range injects {
 				if inject.injectionDef.optional {
-					if verbose {
-						fmt.Printf("Skip optional inject of interface '%v' in to '%v'\n", ifaceType, inject)
+					if ctx.verbose != nil {
+						ctx.verbose.Printf("Skip optional inject of interface '%v' in to '%v'\n", ifaceType, inject)
 					}
 				} else {
 					required = append(required, inject)
@@ -373,8 +374,8 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 
 		for _, inject := range injects {
 
-			if verbose {
-				fmt.Printf("Inject '%v' by implementation '%+v' in to %+v\n", ifaceType, candidates, inject)
+			if ctx.verbose != nil {
+				ctx.verbose.Printf("Inject '%v' by implementation '%+v' in to %+v\n", ifaceType, candidates, inject)
 			}
 
 			if err := inject.inject(candidates); err != nil {
@@ -421,13 +422,6 @@ func (t *context) findAndCacheDirectRecursive(requiredType reflect.Type) []beanl
 
 func registerBean(registry map[reflect.Type][]*bean, classPtr reflect.Type, bean *bean) {
 	registry[classPtr] = append(registry[classPtr], bean)
-/*
-	if list, ok := registry[classPtr]; ok {
-		registry[classPtr] = append(list, bean)
-	} else {
-		registry[classPtr] = oneBean(bean)
-	}
- */
 }
 
 func forEach(initialPos string, scan []interface{}, cb func(i string, obj interface{}) error) error {
@@ -637,8 +631,8 @@ func (t *context) constructBean(bean *bean, stack []*bean) (err error) {
 
 	_, isFactoryBean := bean.obj.(FactoryBean)
 	initializer, hasConstructor := bean.obj.(InitializingBean)
-	if verbose {
-		fmt.Printf("%sConstruct Bean '%s' with type '%v', isFactoryBean=%v, hasFactory=%v, hasObject=%v, hasConstructor=%v\n", indent(len(stack)), bean.name, bean.beanDef.classPtr, isFactoryBean, bean.beenFactory != nil, bean.obj != nil, hasConstructor)
+	if t.verbose != nil {
+		t.verbose.Printf("%sConstruct Bean '%s' with type '%v', isFactoryBean=%v, hasFactory=%v, hasObject=%v, hasConstructor=%v\n", indent(len(stack)), bean.name, bean.beanDef.classPtr, isFactoryBean, bean.beenFactory != nil, bean.obj != nil, hasConstructor)
 	}
 
 	if bean.lifecycle == BeanConstructing {
@@ -659,16 +653,16 @@ func (t *context) constructBean(bean *bean, stack []*bean) (err error) {
 		if err := t.constructBean(factoryDep.factory.bean, append(stack, bean)); err != nil {
 			return err
 		}
-		if verbose {
-			fmt.Printf("%sFactoryDep (%v).Object()\n", indent(len(stack)+1), factoryDep.factory.factoryClassPtr)
+		if t.verbose != nil {
+			t.verbose.Printf("%sFactoryDep (%v).Object()\n", indent(len(stack)+1), factoryDep.factory.factoryClassPtr)
 		}
 		bean, created, err := factoryDep.factory.ctor()
 		if err != nil {
 			return errors.Errorf("factory ctor '%v' failed, %v", factoryDep.factory.factoryClassPtr, err)
 		}
 		if created {
-			if verbose {
-				fmt.Printf("%sDep Created Bean %s with type '%v'\n", indent(len(stack)+1), bean.name, bean.beanDef.classPtr)
+			if t.verbose != nil {
+				t.verbose.Printf("%sDep Created Bean %s with type '%v'\n", indent(len(stack)+1), bean.name, bean.beanDef.classPtr)
 			}
 			t.registry.addBean(factoryDep.factory.factoryBean.ObjectType(), bean)
 		}
@@ -688,8 +682,8 @@ func (t *context) constructBean(bean *bean, stack []*bean) (err error) {
 		if err := t.constructBean(bean.beenFactory.bean, append(stack, bean)); err != nil {
 			return err
 		}
-		if verbose {
-			fmt.Printf("%s(%v).Object()\n", indent(len(stack)), bean.beenFactory.factoryClassPtr)
+		if t.verbose != nil {
+			t.verbose.Printf("%s(%v).Object()\n", indent(len(stack)), bean.beenFactory.factoryClassPtr)
 		}
 		_, _, err := bean.beenFactory.ctor() // always new
 		if err != nil {
@@ -702,8 +696,8 @@ func (t *context) constructBean(bean *bean, stack []*bean) (err error) {
 	}
 
 	if hasConstructor {
-		if verbose {
-			fmt.Printf("%sPostConstruct Bean '%s' with type '%v'\n", indent(len(stack)), bean.name, bean.beanDef.classPtr)
+		if t.verbose != nil {
+			t.verbose.Printf("%sPostConstruct Bean '%s' with type '%v'\n", indent(len(stack)), bean.name, bean.beanDef.classPtr)
 		}
 		if err := initializer.PostConstruct(); err != nil {
 			return errors.Errorf("post construct failed %s, %v", getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
@@ -769,8 +763,8 @@ func (t *context) destroyBean(b *bean) (err error) {
 	}
 
 	b.lifecycle = BeanDestroying
-	if verbose {
-		fmt.Printf("Destroy bean '%s' with type '%v'\n", b.name, b.beanDef.classPtr)
+	if t.verbose != nil {
+		t.verbose.Printf("Destroy bean '%s' with type '%v'\n", b.name, b.beanDef.classPtr)
 	}
 	if dis, ok := b.obj.(DisposableBean); ok {
 		if e := dis.Destroy(); e != nil {

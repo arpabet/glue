@@ -7,6 +7,7 @@ package glue_test
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/schwid/glue"
+	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -96,9 +97,8 @@ func (t *repeatedFactoryBeanExample) Singleton() bool {
 
 func TestSingleFactoryBean(t *testing.T) {
 
-	glue.Verbose(true)
-
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&someService{testing: t},
 		&factoryBeanExample{testing: t},
 	)
@@ -115,10 +115,9 @@ func TestSingleFactoryBean(t *testing.T) {
 
 func TestRepeatedFactoryBean(t *testing.T) {
 
-	glue.Verbose(true)
-
 	app := &applicationContext{}
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&someService{testing: t},
 		&factoryBeanExample{testing: t},
 		&repeatedFactoryBeanExample{testing: t},
@@ -133,10 +132,9 @@ func TestRepeatedFactoryBean(t *testing.T) {
 
 func TestFactoryBean(t *testing.T) {
 
-	glue.Verbose(true)
-
 	app := &applicationContext{}
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		app,
 		&factoryBeanExample{testing: t},
 		&someService{testing: t},
@@ -223,9 +221,8 @@ func (t *factoryBeanImpl) Singleton() bool {
 
 func TestFactoryInterfaceBean(t *testing.T) {
 
-	glue.Verbose(true)
-
 	ctx, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&factoryBeanImpl{testing: t},
 		&someServiceImpl{testing: t},
 		&struct {

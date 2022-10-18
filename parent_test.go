@@ -7,6 +7,7 @@ package glue_test
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/schwid/glue"
+	"log"
 	"reflect"
 	"testing"
 )
@@ -71,9 +72,8 @@ func (t *serviceBean) Run() {
 
 func TestParent(t *testing.T) {
 
-	glue.Verbose(true)
-
 	parent, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&coreBean{},
 	)
 	require.NoError(t, err)

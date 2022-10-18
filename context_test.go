@@ -203,10 +203,10 @@ func TestCreateDoubleObjects(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 
-	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
+		glue.Verbose{ Log: logger },
 		logger,
 		&storageImpl{},
 		&configServiceImpl{},
@@ -260,13 +260,13 @@ func TestCreate(t *testing.T) {
 
 func TestCreateArray(t *testing.T) {
 
-	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var b []interface{}
 	b = append(b, logger, &storageImpl{}, &configServiceImpl{})
 
 	ctx, err := glue.New(
+		glue.Verbose{ Log: logger },
 		b,
 		&userServiceImpl{},
 		&appServiceImpl{},
@@ -291,7 +291,6 @@ func (t scannerImpl) Beans() []interface{} {
 
 func TestCreateScanner(t *testing.T) {
 
-	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	scanner := scannerImpl{
@@ -299,6 +298,7 @@ func TestCreateScanner(t *testing.T) {
 	}
 
 	ctx, err := glue.New(
+		glue.Verbose{ Log: logger },
 		scanner,
 		&userServiceImpl{},
 		&appServiceImpl{},
@@ -323,10 +323,10 @@ func (t *requestScope) routeAddUser(user string) {
 
 func TestRequest(t *testing.T) {
 
-	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
+		glue.Verbose{ Log: logger },
 		logger,
 		&storageImpl{},
 		&configServiceImpl{},
@@ -351,9 +351,8 @@ func TestRequest(t *testing.T) {
 
 func TestMissingPointer(t *testing.T) {
 
-	glue.Verbose(true)
-
 	_, err := glue.New(
+		glue.Verbose{ Log: log.Default() },
 		&storageImpl{},
 		&configServiceImpl{},
 		&userServiceImpl{},
@@ -368,10 +367,10 @@ func TestMissingPointer(t *testing.T) {
 
 func TestMissingInterface(t *testing.T) {
 
-	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	_, err := glue.New(
+		glue.Verbose{ Log: logger },
 		logger,
 		&storageImpl{},
 		&userServiceImpl{},
@@ -383,10 +382,10 @@ func TestMissingInterface(t *testing.T) {
 
 func TestMissingInterfaceBean(t *testing.T) {
 
-	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
+		glue.Verbose{ Log: logger },
 		logger,
 		&storageImpl{},
 		&configServiceImpl{},
@@ -412,10 +411,10 @@ func TestMissingInterfaceBean(t *testing.T) {
 
 func TestRequestMultithreading(t *testing.T) {
 
-	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
+		glue.Verbose{ Log: logger },
 		logger,
 		&storageImpl{},
 		&configServiceImpl{},
