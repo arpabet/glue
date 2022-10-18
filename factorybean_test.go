@@ -96,7 +96,7 @@ func (t *repeatedFactoryBeanExample) Singleton() bool {
 
 func TestSingleFactoryBean(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&someService{testing: t},
@@ -115,7 +115,7 @@ func TestSingleFactoryBean(t *testing.T) {
 
 func TestRepeatedFactoryBean(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	app := &applicationContext{}
 	ctx, err := glue.New(
@@ -133,7 +133,7 @@ func TestRepeatedFactoryBean(t *testing.T) {
 
 func TestFactoryBean(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	app := &applicationContext{}
 	ctx, err := glue.New(
@@ -223,7 +223,7 @@ func (t *factoryBeanImpl) Singleton() bool {
 
 func TestFactoryInterfaceBean(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&factoryBeanImpl{testing: t},

@@ -203,7 +203,7 @@ func TestCreateDoubleObjects(t *testing.T) {
 
 func TestCreate(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
@@ -260,7 +260,7 @@ func TestCreate(t *testing.T) {
 
 func TestCreateArray(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var b []interface{}
@@ -291,7 +291,7 @@ func (t scannerImpl) Beans() []interface{} {
 
 func TestCreateScanner(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	scanner := scannerImpl{
@@ -323,7 +323,7 @@ func (t *requestScope) routeAddUser(user string) {
 
 func TestRequest(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
@@ -351,7 +351,7 @@ func TestRequest(t *testing.T) {
 
 func TestMissingPointer(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	_, err := glue.New(
 		&storageImpl{},
@@ -368,7 +368,7 @@ func TestMissingPointer(t *testing.T) {
 
 func TestMissingInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	_, err := glue.New(
@@ -383,7 +383,7 @@ func TestMissingInterface(t *testing.T) {
 
 func TestMissingInterfaceBean(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
@@ -412,7 +412,7 @@ func TestMissingInterfaceBean(t *testing.T) {
 
 func TestRequestMultithreading(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(

@@ -4,7 +4,10 @@
 
 package glue
 
-import "reflect"
+import (
+	"net/http"
+	"reflect"
+)
 
 type BeanLifecycle int32
 
@@ -156,8 +159,14 @@ type Context interface {
 		ctx.Inject(rp)
 		required.NotNil(t, rp.UserService)
 	*/
-
 	Inject(interface{}) error
+
+	/**
+	Returns resource and true if found
+	Path should come with ResourceSource name prefix.
+	Uses default level of lookup for the resource.
+	 */
+	Resource(path string) (Resource, bool)
 
 	/**
 	Returns information about context
@@ -265,3 +274,57 @@ type OrderedBean interface {
 	*/
 	BeanOrder() int
 }
+
+/**
+	Resource source is using to add bind resources in to the context
+ */
+
+var ResourceSourceClass = reflect.TypeOf((*ResourceSource)(nil))
+
+type ResourceSource struct {
+
+	/**
+		Used for resource reference based on pattern "name:path"
+		ResourceSource instances sharing the same name would be merge and on conflict resource names would generate errors.
+	 */
+	Name  string
+
+	/**
+		Known paths
+	 */
+	AssetNames []string
+
+	/**
+		FileSystem to access or serve assets or resources
+	 */
+	AssetFiles http.FileSystem
+
+}
+
+/**
+	Property source is serving as a property placeholder of file if it's ending with ".properties", ".props", ".yaml" or ".yml".
+ */
+
+var PropertySourceClass = reflect.TypeOf((*PropertySource)(nil))
+
+type PropertySource struct {
+
+	/**
+		Path to the properties file with prefix name of ResourceSource as "name:path".
+	 */
+
+	Path string
+
+}
+
+/**
+This interface used to access the specific resource
+*/
+var ResourceClass = reflect.TypeOf((*Resource)(nil)).Elem()
+
+type Resource interface {
+
+	Open() (http.File, error)
+
+}
+

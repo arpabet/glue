@@ -92,7 +92,7 @@ func (t *dosServiceImpl) Dos() {
 
 func TestLazyBeanInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		newUnoService(t),
@@ -171,7 +171,7 @@ func (t *unService) Un() {
 
 func TestLazyBeanPointers(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&zeroService{testing: t},

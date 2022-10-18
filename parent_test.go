@@ -71,7 +71,7 @@ func (t *serviceBean) Run() {
 
 func TestParent(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	parent, err := glue.New(
 		&coreBean{},

@@ -76,7 +76,7 @@ func TestMapRequiredByPointer(t *testing.T) {
 
 func TestArrayByPointer(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	// initialization order
 	ctx, err := glue.New(
@@ -116,7 +116,7 @@ func TestArrayByPointer(t *testing.T) {
 
 func TestOrderedArrayByPointer(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	// initialization order
 	ctx, err := glue.New(
@@ -159,7 +159,7 @@ func TestOrderedArrayByPointer(t *testing.T) {
 
 func TestMapByPointer(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&elementX{name: "a"},
@@ -197,7 +197,7 @@ func TestMapByPointer(t *testing.T) {
 
 func TestMapDuplicatesByPointer(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	_, err := glue.New(
 		&elementX{name: "a"},
@@ -292,7 +292,7 @@ func TestMapRequiredByInterface(t *testing.T) {
 
 func TestArrayByInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	// initialization order
 	ctx, err := glue.New(
@@ -331,7 +331,7 @@ func TestArrayByInterface(t *testing.T) {
 
 func TestOrderedArrayByInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&orderedElementImpl{name: "c"},
@@ -369,7 +369,7 @@ func TestOrderedArrayByInterface(t *testing.T) {
 
 func TestMapByInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	// initialization order
 	ctx, err := glue.New(
@@ -403,7 +403,7 @@ func TestMapByInterface(t *testing.T) {
 
 func TestMapDuplicatesByInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	// initialization order
 	_, err := glue.New(

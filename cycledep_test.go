@@ -28,7 +28,7 @@ type cPlainBean struct {
 
 func TestPlainBeanCycle(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&aPlainBean{},
@@ -46,7 +46,7 @@ type selfDepBean struct {
 
 func TestSelfDepCycle(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	self := &selfDepBean{}
 

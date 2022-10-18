@@ -19,7 +19,7 @@ type functionHolder struct {
 
 func TestPrimitiveFunctions(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	holder := &functionHolder{}
 
@@ -75,7 +75,7 @@ func TestFunctions(t *testing.T) {
 		return nil
 	})
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	srv := &funcServiceImpl{}
 

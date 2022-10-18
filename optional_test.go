@@ -22,7 +22,7 @@ type beanB struct {
 
 func TestOptionalBeanByPointer(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&beanB{testing: t},
@@ -58,7 +58,7 @@ func (t *beanBServiceImpl) B() {
 
 func TestOptionalBeanByInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&beanBServiceImpl{testing: t},

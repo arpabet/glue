@@ -34,7 +34,7 @@ type topBean struct {
 
 func TestBeanReload(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	reBean := &reloadableBean{}
 	tBean := &topBean{}

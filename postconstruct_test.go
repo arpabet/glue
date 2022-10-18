@@ -92,7 +92,7 @@ func (t *beanClient) Destroy() error {
 
 func TestPostConstruct(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&beanClient{testing: t},
@@ -117,7 +117,7 @@ func TestPostConstruct(t *testing.T) {
 
 func TestPostConstructWithError(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&beanClient{testing: t},
@@ -181,7 +181,7 @@ func (t *cService) PostConstruct() error {
 
 func TestPostConstructCycle(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&aService{testing: t},

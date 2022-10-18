@@ -28,7 +28,7 @@ func (t *secondBean) Run() {
 
 func TestBeanByPointer(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&firstBean{},
@@ -46,7 +46,7 @@ func TestBeanByPointer(t *testing.T) {
 
 func TestMultipleBeanByPointer(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&firstBean{},
@@ -63,7 +63,7 @@ func TestMultipleBeanByPointer(t *testing.T) {
 
 func TestSearchBeanByPointerNotFound(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&firstBean{},
@@ -78,7 +78,7 @@ func TestSearchBeanByPointerNotFound(t *testing.T) {
 
 func TestBeanByStruct(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		firstBean{},
@@ -121,7 +121,7 @@ func (t *secondServiceImpl) Second() {
 
 func TestBeanByInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&firstServiceImpl{testing: t},
@@ -158,7 +158,7 @@ func (t *firstService2Impl) First() {
 
 func TestMultipleBeansByInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&firstServiceImpl{testing: t},
@@ -178,7 +178,7 @@ func TestMultipleBeansByInterface(t *testing.T) {
 
 func TestSpecificBeanByInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&firstServiceImpl{testing: t},
@@ -201,7 +201,7 @@ func TestSpecificBeanByInterface(t *testing.T) {
 
 func TestNotFoundSpecificBeanByInterface(t *testing.T) {
 
-	glue.Verbose = true
+	glue.Verbose(true)
 
 	ctx, err := glue.New(
 		&firstServiceImpl{testing: t},
