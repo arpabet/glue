@@ -44,6 +44,11 @@ type context struct {
 	registry registry
 
 	/**
+	Placeholder properties of the context
+	 */
+	properties Properties
+
+	/**
 	Cache bean descriptions for Inject calls in runtime
 	*/
 	runtimeCache sync.Map // key is reflect.Type (classPtr), value is *beanDef
@@ -90,8 +95,14 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 			beansByType: make(map[reflect.Type][]*bean),
 			resourceSources: make(map[string]*resourceSource),
 		},
+		properties: NewProperties(),
 	}
 
+	if parent != nil {
+		ctx.properties.Merge(parent.properties)
+	}
+
+	// add context bean to registry
 	ctxBean := &bean{
 		obj:      ctx,
 		valuePtr: reflect.ValueOf(ctx),
@@ -101,6 +112,17 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 		lifecycle: BeanInitialized,
 	}
 	core[ctxBean.beanDef.classPtr] = []*bean {ctxBean}
+
+	// add properties bean to registry
+	propertiesBean := &bean{
+		obj:      ctx,
+		valuePtr: reflect.ValueOf(ctx.properties),
+		beanDef: &beanDef{
+			classPtr: reflect.TypeOf(ctx.properties),
+		},
+		lifecycle: BeanInitialized,
+	}
+	core[propertiesBean.beanDef.classPtr] = []*bean {propertiesBean}
 
 	// scan
 	err := forEach("", scan, func(pos string, obj interface{}) (err error) {
@@ -132,11 +154,13 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 				ctx.verbose.Printf("PropertySource %s\n", instance.Path)
 			}
 			propertySources = append(propertySources, instance.Path)
+			return
 		case *PropertySource:
 			if ctx.verbose != nil {
 				ctx.verbose.Printf("PropertySource %s\n", instance.Path)
 			}
 			propertySources = append(propertySources, instance.Path)
+			return
 		default:
 		}
 
@@ -386,6 +410,13 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 
 	}
 
+	if len(propertySources) > 0 {
+		if err := ctx.loadProperties(propertySources); err != nil {
+			ctx.Close()
+			return nil, err
+		}
+	}
+
 	if err := ctx.postConstruct(); err != nil {
 		ctx.Close()
 		return nil, err
@@ -393,6 +424,30 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 		return ctx, nil
 	}
 
+}
+
+func (t *context) loadProperties(propertySources []string) error {
+
+	for _, source := range propertySources {
+		if resource, ok := t.Resource(source); ok {
+
+			file, err := resource.Open()
+			if err != nil {
+				return errors.Errorf("i/o error with placeholder properties resource '%s', %v", source, err)
+			}
+
+			err = t.properties.Load(file)
+			file.Close()
+			if err != nil {
+				return errors.Errorf("load error of placeholder properties resource '%s', %v", source, err)
+			}
+
+		} else {
+			return errors.Errorf("placeholder properties resource '%s' is not found", source)
+		}
+	}
+
+	return nil
 }
 
 func (t *context) findDirectRecursive(requiredType reflect.Type) []beanlist {
@@ -843,6 +898,10 @@ func (t *context) Resource(path string) (Resource, bool) {
 		current = current.parent
 	}
 	return nil, false
+}
+
+func (t *context) Properties() Properties {
+	return t.properties
 }
 
 func (t *context) String() string {

@@ -45,7 +45,7 @@ func TestCreateEmpty(t *testing.T) {
 	require.NotNil(t, ctx)
 	defer ctx.Close()
 
-	require.Equal(t, 1, len(ctx.Core()))
+	require.Equal(t, 2, len(ctx.Core()))
 
 	c := ctx.Bean(glue.ContextClass, glue.DefaultLevel)
 	require.Equal(t, 1, len(c))
@@ -225,7 +225,7 @@ func TestCreate(t *testing.T) {
 	require.NotNil(t, ctx)
 	defer ctx.Close()
 
-	require.Equal(t, 7, len(ctx.Core()))
+	require.Equal(t, 8, len(ctx.Core()))
 
 	list := ctx.Lookup("storage", glue.DefaultLevel)
 	require.Equal(t, 1, len(list))
@@ -276,7 +276,7 @@ func TestCreateArray(t *testing.T) {
 	require.NotNil(t, ctx)
 	defer ctx.Close()
 
-	require.Equal(t, 6, len(ctx.Core()))
+	require.Equal(t, 7, len(ctx.Core()))
 
 }
 
@@ -308,7 +308,7 @@ func TestCreateScanner(t *testing.T) {
 	require.NotNil(t, ctx)
 	defer ctx.Close()
 
-	require.Equal(t, 6, len(ctx.Core()))
+	require.Equal(t, 7, len(ctx.Core()))
 
 }
 

@@ -172,6 +172,11 @@ type Context interface {
 	Resource(path string) (Resource, bool)
 
 	/**
+	Returns context placeholder properties
+	 */
+	Properties() Properties
+
+	/**
 	Returns information about context
 	*/
 	String() string

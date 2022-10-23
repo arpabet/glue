@@ -6,7 +6,6 @@ package glue_test
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/schwid/glue"
 	"github.com/stretchr/testify/require"
 	"io/fs"
@@ -38,6 +37,8 @@ type beanWithProperties struct {
 	Bool bool `value:"example.bool"`
 	Float32 float32 `value:"example.float"`
 	Float64 float64 `value:"example.double"`
+
+	Properties  glue.Properties `inject`
 
 }
 
@@ -127,6 +128,8 @@ func TestProperties(t *testing.T) {
 
 func TestPlaceholderProperties(t *testing.T) {
 
+	b := new(beanWithProperties)
+
 	ctx, err := glue.New(
 		glue.Verbose{ Log: log.Default() },
 		glue.ResourceSource{
@@ -134,6 +137,8 @@ func TestPlaceholderProperties(t *testing.T) {
 			AssetNames: []string{ "application.properties" },
 			AssetFiles: oneFile{ name: "application.properties", content: propertiesFile },
 		},
+		glue.PropertySource{Path: "resources:application.properties"},
+		b,
 	)
 
 	require.NoError(t, err)
@@ -149,6 +154,9 @@ func TestPlaceholderProperties(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, propertiesFile, string(content))
 
-	fmt.Printf("content = %s\n", string(content))
+	require.NotNil(t, b.Properties)
+	require.Equal(t, 6, b.Properties.Len())
+
+	require.Equal(t, ctx.Properties(), b.Properties)
 
 }
