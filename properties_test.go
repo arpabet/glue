@@ -46,24 +46,31 @@ type beanWithProperties struct {
 
 	Str  string `value:"example.str"`
 	DefStr  string `value:"example.str.def,default=def"`
+	ArrStr []string  `value:"example.str.arr,default=a;b;c"`
 
 	Int  int `value:"example.int"`
 	DefInt  int `value:"example.int.def,default=555"`
+	ArrInt  []int `value:"example.int.arr,default=1;2;3"`
 
 	Bool bool `value:"example.bool"`
 	DefBool  bool `value:"example.bool.def,default=true"`
+	ArrBool  []bool `value:"example.bool.arr,default=true;false;true"`
 
 	Float32 float32 `value:"example.float"`
 	DefFloat32 float32 `value:"example.float.def,default=5.55"`
+	ArrFloat32 []float32 `value:"example.float.arr,default=1.2;1.3"`
 
 	Float64 float64 `value:"example.double"`
 	DefFloat64 float64 `value:"example.double.def,default=5.55"`
+	ArrFloat64 []float64 `value:"example.double.arr,default=1.2;1.3"`
 
 	Duration time.Duration `value:"example.duration"`
 	DefDuration time.Duration `value:"example.duration.def,default=500ms"`
+	ArrDuration []time.Duration `value:"example.duration.arr,default=100ms;200ms"`
 
 	Time time.Time  `value:"example.time,layout=2006-01-02"`
 	DefTime time.Time  `value:"example.time.def,layout=2006-01-02,default=2022-10-21"`
+	ArrTime []time.Time  `value:"example.time.arr,layout=2006-01-02,default=2022-10-21;2022-10-22"`
 
 	Properties  glue.Properties `inject`
 
@@ -215,9 +222,9 @@ func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 	require.Equal(t, 1.23, b.Float64)
 	require.Equal(t, time.Duration(300000000), b.Duration)
 
-	tm, err := time.Parse( "2006-01-02", "2022-10-22")
+	tm22, err := time.Parse( "2006-01-02", "2022-10-22")
 	require.NoError(t, err)
-	require.Equal(t, tm, b.Time)
+	require.Equal(t, tm22, b.Time)
 
 	/**
 	Test default properties
@@ -229,8 +236,19 @@ func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 	require.Equal(t, 5.55, b.DefFloat64)
 	require.Equal(t, time.Duration(500000000), b.DefDuration)
 
-	tm, err = time.Parse( "2006-01-02", "2022-10-21")
+	tm21, err := time.Parse( "2006-01-02", "2022-10-21")
 	require.NoError(t, err)
-	require.Equal(t, tm, b.DefTime)
+	require.Equal(t, tm21, b.DefTime)
+
+	/**
+	Test array properties
+	*/
+	require.Equal(t, []string{"a", "b", "c"}, b.ArrStr)
+	require.Equal(t, []int{1, 2, 3}, b.ArrInt)
+	require.Equal(t, []bool{true, false, true}, b.ArrBool)
+	require.Equal(t, []float32{1.2, 1.3}, b.ArrFloat32)
+	require.Equal(t, []float64{1.2, 1.3}, b.ArrFloat64)
+	require.Equal(t, []time.Duration{100000000, 200000000}, b.ArrDuration)
+	require.Equal(t, []time.Time{tm21, tm22}, b.ArrTime)
 
 }

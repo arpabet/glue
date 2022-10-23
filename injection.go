@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -502,6 +503,18 @@ func convertProperty(s string, t reflect.Type, layout string) (val reflect.Value
 
 	switch {
 
+	case isArray(t):
+		parts := trimSplit(s, ";")
+		slice := reflect.MakeSlice(t, 0, len(parts))
+		for _, s := range parts {
+			val, err := convertProperty(s, t.Elem(), layout)
+			if err != nil {
+				return slice, err
+			}
+			slice = reflect.Append(slice, val)
+		}
+		return slice, err
+
 	case isDuration(t):
 		v, err = time.ParseDuration(s)
 
@@ -565,4 +578,16 @@ func isTime(t reflect.Type) bool {
 	return t == timeClass
 }
 
+func isArray(t reflect.Type) bool {
+	return t.Kind() == reflect.Array || t.Kind() == reflect.Slice
+}
 
+func trimSplit(s string, sep string) []string {
+	var a []string
+	for _, v := range strings.Split(s, sep) {
+		if v = strings.TrimSpace(v); v != "" {
+			a = append(a, v)
+		}
+	}
+	return a
+}
