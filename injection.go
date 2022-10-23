@@ -476,6 +476,27 @@ func (t *propInjection) inject(properties Properties) error {
 	return nil
 }
 
+// runtime injection
+func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) error {
+
+	field := value.Field(t.fieldNum)
+
+	if !field.CanSet() {
+		return errors.Errorf("field '%s' in class '%v' is not public", t.fieldName, t.class)
+	}
+
+	strValue := properties.GetString(t.propertyName, t.defaultValue)
+
+	v, err := convertProperty(strValue, t.fieldType, t.layout)
+	if err != nil {
+		return errors.Errorf("property '%s' in class '%v' has convert error, %v", t.fieldName, t.class, err)
+	}
+
+	field.Set(v)
+	return nil
+
+}
+
 func convertProperty(s string, t reflect.Type, layout string) (val reflect.Value, err error) {
 	var v interface{}
 

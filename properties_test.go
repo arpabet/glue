@@ -181,12 +181,32 @@ func TestPlaceholderProperties(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, propertiesFile, string(content))
 
+	verifyPropertyBean(t, b)
+
+	/**
+	Should be the same object
+	 */
+	require.Equal(t, ctx.Properties(), b.Properties)
+
+	/**
+	Runtime injection test
+	 */
+	b2 := new(beanWithProperties)
+	err = ctx.Inject(b2)
+	require.NoError(t, err)
+
+	verifyPropertyBean(t, b2)
+
+}
+
+func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
+
 	require.NotNil(t, b.Properties)
 	require.Equal(t, 7, b.Properties.Len())
 
 	/**
 	Test injected properties
-	 */
+	*/
 
 	require.Equal(t, "string\n", b.Str)
 	require.Equal(t, 123, b.Int)
@@ -201,7 +221,7 @@ func TestPlaceholderProperties(t *testing.T) {
 
 	/**
 	Test default properties
-	 */
+	*/
 	require.Equal(t, "def", b.DefStr)
 	require.Equal(t, 555, b.DefInt)
 	require.Equal(t, true, b.DefBool)
@@ -212,10 +232,5 @@ func TestPlaceholderProperties(t *testing.T) {
 	tm, err = time.Parse( "2006-01-02", "2022-10-21")
 	require.NoError(t, err)
 	require.Equal(t, tm, b.DefTime)
-
-	/**
-	Should be the same object
-	 */
-	require.Equal(t, ctx.Properties(), b.Properties)
 
 }

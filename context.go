@@ -605,6 +605,11 @@ func (t *context) Inject(obj interface{}) error {
 				return err
 			}
 		}
+		for _, inject := range bd.properties {
+			if err := inject.inject(&value, t.properties); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
