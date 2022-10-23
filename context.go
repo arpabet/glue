@@ -88,6 +88,7 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 	interfaces := make(map[reflect.Type][]*injection)
 	var properties []*propInjection
 	var propertySources []string
+	var propertyResolvers []PropertyResolver
 
 	ctx := &context{
 		parent: parent,
@@ -162,6 +163,11 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 				ctx.verbose.Printf("PropertySource %s\n", instance.Path)
 			}
 			propertySources = append(propertySources, instance.Path)
+		case PropertyResolver:
+			if ctx.verbose != nil {
+				ctx.verbose.Printf("PropertyResolver Priority %d\n", instance.Priority())
+			}
+			propertyResolvers = append(propertyResolvers, instance)
 		default:
 		}
 
@@ -439,6 +445,13 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 			ctx.Close()
 			return nil, err
 		}
+	}
+
+	/**
+	Register property resolvers from context
+	 */
+	for _, r := range propertyResolvers {
+		ctx.properties.Register(r)
 	}
 
 	/**
