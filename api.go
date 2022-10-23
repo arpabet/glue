@@ -326,14 +326,44 @@ type PropertySource struct {
 }
 
 /**
+	Property Resolver interface used to enhance the Properties interface with additional sources of properties.
+ */
+
+var PropertyResolverClass = reflect.TypeOf((*PropertyResolver)(nil))
+
+type PropertyResolver interface {
+
+	/**
+	Priority in property resolving, it could be lower or higher than default one.
+	 */
+	Priority() int
+
+	/**
+	Resolves the property
+	 */
+	GetProperty(key string) (value string, ok bool)
+
+}
+
+/**
 Use this bean to parse properties from file and place in context.
 Merge properties from multiple PropertySource files in to one Properties bean.
 For placeholder properties this bean used as a source of values.
+
+Internal property storage has default priority of property resolver.
+The higher priority look first.
 */
+
+const defaultPropertyResolverPriority = 100
 
 var PropertiesClass = reflect.TypeOf((*Properties)(nil))
 
 type Properties interface {
+
+	/**
+	Register additional property resolver. It would be sorted by priority.
+	 */
+	Register(PropertyResolver)
 
 	/**
 	Loads properties from map

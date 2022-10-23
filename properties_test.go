@@ -130,6 +130,36 @@ func (t assetFile) Sys() interface{} {
 	return t
 }
 
+type onePropertyResolver struct {
+	key string
+	value string
+}
+
+func (t onePropertyResolver) Priority() int {
+	// very low priority
+	return 0
+}
+
+func (t onePropertyResolver) GetProperty(key string) (value string, ok bool) {
+	if t.key == key {
+		return t.value, true
+	}
+	return "", false
+}
+
+func TestPropertyResolver(t *testing.T) {
+
+	p := glue.NewProperties()
+	err := p.Parse(propertiesFile)
+	require.NoError(t, err)
+
+	p.Register(&onePropertyResolver{ key: "new.property", value: "new.value"})
+
+	p.GetString("new.property", "")
+
+	require.Equal(t, "new.value", p.GetString("new.property", ""))
+}
+
 func TestProperties(t *testing.T) {
 
 	p := glue.NewProperties()

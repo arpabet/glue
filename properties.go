@@ -25,16 +25,36 @@ type properties struct {
 	store map[string]string
 	comments map[string][]string
 
+	resolvers []PropertyResolver
+
 	// property conversion error handler
 	errorHandler func(string, error)
 
 }
 
 func NewProperties() Properties {
-	return &properties {
+	t := &properties {
 		store: make(map[string]string),
 		comments: make(map[string][]string),
+		resolvers: make([]PropertyResolver, 0, 10),
 	}
+	t.Register(t)
+	return t
+}
+
+func (t *properties) Register(resolver PropertyResolver) {
+	t.Lock()
+	defer t.Unlock()
+	t.resolvers = append(t.resolvers, resolver)
+	if len(t.resolvers) > 1 {
+		sort.Slice(t.resolvers, func(i, j int) bool {
+			return t.resolvers[i].Priority() >= t.resolvers[j].Priority()
+		})
+	}
+}
+
+func (t *properties) Priority() int {
+	return defaultPropertyResolverPriority
 }
 
 func (t *properties) LoadMap(source map[string]interface{}) {
@@ -195,11 +215,33 @@ func (t *properties) Contains(key string) bool {
 	return ok
 }
 
-func (t *properties) Get(key string) (value string, ok bool) {
+func (t *properties) GetProperty(key string) (value string, ok bool) {
 	t.RLock()
 	defer t.RUnlock()
 	value, ok = t.store[key]
 	return
+}
+
+func (t *properties) nextPropertyResolver(i int) (PropertyResolver, bool) {
+	t.RLock()
+	defer t.RUnlock()
+	if i < 0 || i >= len(t.resolvers) {
+		return nil, false
+	}
+	return t.resolvers[i], true
+}
+
+func (t *properties) Get(key string) (value string, ok bool) {
+	for i := 0;; i++ {
+		r, ok := t.nextPropertyResolver(i)
+		if !ok {
+			break
+		}
+		if value, ok := r.GetProperty(key); ok {
+			return value, true
+		}
+	}
+	return "", false
 }
 
 func (t *properties) GetString(key, def string) string {
