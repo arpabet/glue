@@ -5,9 +5,11 @@
 package glue
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"reflect"
+	"time"
 )
 
 type BeanLifecycle int32
@@ -319,6 +321,113 @@ type PropertySource struct {
 }
 
 /**
+Use this bean to parse properties from file and place in context.
+Merge properties from multiple PropertySource files in to one Properties bean.
+For placeholder properties this bean used as a source of values.
+*/
+
+var PropertiesClass = reflect.TypeOf((*Properties)(nil))
+
+type Properties interface {
+
+	/**
+	Loads properties from input stream
+	 */
+	Load(reader io.Reader) error
+
+	/**
+	Saves properties to output stream
+	 */
+	Save(writer io.Writer) (n int, err error)
+
+	/**
+	Parsing content as an UTF-8 string
+	 */
+	Parse(content string) error
+
+	/**
+	Dumps all properties to UTF-8 string
+	 */
+	Dump() string
+
+	/**
+	Merge with other properties
+	 */
+	Merge(other Properties)
+
+	/**
+	Gets length of the properties
+	 */
+	Len() int
+
+	/**
+	Gets all keys associated with properties
+	 */
+	Keys() []string
+
+	/**
+	Return copy of properties as Map
+	 */
+	Map() map[string]string
+
+	/**
+	Checks if property contains the key
+	 */
+	Contains(key string) bool
+
+	/**
+	Gets property value and true if exist
+	 */
+	Get(key string) (value string, ok bool)
+
+	/**
+	Additional getters with type conversion
+	 */
+	GetString(key, def string) string
+	GetBool(key string, def bool) bool
+	GetInt(key string, def int) int
+	GetFloat(key string, def float32) float32
+	GetDouble(key string, def float64) float64
+	GetDuration(key string, def time.Duration) time.Duration
+
+	// properties conversion error handler
+	GetErrorHandler() func(string, error)
+	SetErrorHandler(onError func(string, error))
+
+	/**
+	Sets property value
+	 */
+	Set(key string, value string)
+
+	/**
+	Remove property by key
+	 */
+	Remove(key string) bool
+
+	/**
+	Delete all properties and comments
+	 */
+	Clear()
+
+	/**
+	Gets comments associated with property
+	 */
+	GetComments(key string) []string
+
+	/**
+	Sets comments associated with property
+	 */
+	SetComments(key string, comments []string)
+
+	/**
+	ClearComments removes the comments for all keys.
+	 */
+	ClearComments()
+
+}
+
+
+/**
 This interface used to access the specific resource
 */
 var ResourceClass = reflect.TypeOf((*Resource)(nil)).Elem()
@@ -344,3 +453,5 @@ type Verbose struct {
 	Log  *log.Logger
 
 }
+
+
