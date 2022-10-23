@@ -85,6 +85,7 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 	core := make(map[reflect.Type][]*bean)
 	pointers := make(map[reflect.Type][]*injection)
 	interfaces := make(map[reflect.Type][]*injection)
+	var properties []*propInjection
 	var propertySources []string
 
 	ctx := &context{
@@ -154,13 +155,12 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 				ctx.verbose.Printf("PropertySource %s\n", instance.Path)
 			}
 			propertySources = append(propertySources, instance.Path)
-			return
+			obj = &instance
 		case *PropertySource:
 			if ctx.verbose != nil {
 				ctx.verbose.Printf("PropertySource %s\n", instance.Path)
 			}
 			propertySources = append(propertySources, instance.Path)
-			return
 		default:
 		}
 
@@ -218,6 +218,9 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 				}
 			}
 
+			/**
+			Enumerate injection fields
+			 */
 			if len(objBean.beanDef.fields) > 0 {
 				value := objBean.valuePtr.Elem()
 				for _, injectDef := range objBean.beanDef.fields {
@@ -255,6 +258,23 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 					default:
 						return errors.Errorf("injecting not a pointer or interface on field type '%v' at position '%s' in %v", injectDef.fieldType, pos, classPtr)
 					}
+				}
+			}
+
+			/**
+			Enumerate injection properties
+			 */
+			if len(objBean.beanDef.properties) > 0 {
+				value := objBean.valuePtr.Elem()
+				for _, injectDef := range objBean.beanDef.properties {
+					if ctx.verbose != nil {
+						if injectDef.defaultValue != "" {
+							ctx.verbose.Printf("	Property %v %s default %s\n", injectDef.fieldType, injectDef.propertyName, injectDef.defaultValue)
+						} else {
+							ctx.verbose.Printf("	Property %v %s\n", injectDef.fieldType, injectDef.propertyName)
+						}
+					}
+					properties = append(properties, &propInjection{ objBean, value, injectDef })
 				}
 			}
 
@@ -410,6 +430,9 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 
 	}
 
+	/**
+	Load properties from property sources
+	 */
 	if len(propertySources) > 0 {
 		if err := ctx.loadProperties(propertySources); err != nil {
 			ctx.Close()
@@ -417,6 +440,21 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 		}
 	}
 
+	/**
+	Inject properties
+	 */
+	for _, inject := range properties {
+		if ctx.verbose != nil {
+			ctx.verbose.Printf("Inject Property '%s' in '%s'\n", inject.injectionDef.propertyName, inject.bean.name)
+		}
+		if err := inject.inject(ctx.properties); err != nil {
+			return nil, errors.Errorf("property '%s' in '%s' injection error, %v", inject.injectionDef.propertyName, inject.bean.name, err)
+		}
+	}
+
+	/**
+	PostConstruct beans
+	 */
 	if err := ctx.postConstruct(); err != nil {
 		ctx.Close()
 		return nil, err

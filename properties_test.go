@@ -28,15 +28,42 @@ example.bool = true
 example.float = 1.23
 example.double = 1.23
 example.duration = 300ms
+example.time = 2022-10-22
+`
+
+var propertiesFileYAML = `
+example:
+	str: "string\n"
+    int: 123
+    bool: true
+    float: 1.23
+    double: 1.23
+    duration: 300ms
+    time: 2022-10-22
 `
 
 type beanWithProperties struct {
 
 	Str  string `value:"example.str"`
+	DefStr  string `value:"example.str.def,default=def"`
+
 	Int  int `value:"example.int"`
+	DefInt  int `value:"example.int.def,default=555"`
+
 	Bool bool `value:"example.bool"`
+	DefBool  bool `value:"example.bool.def,default=true"`
+
 	Float32 float32 `value:"example.float"`
+	DefFloat32 float32 `value:"example.float.def,default=5.55"`
+
 	Float64 float64 `value:"example.double"`
+	DefFloat64 float64 `value:"example.double.def,default=5.55"`
+
+	Duration time.Duration `value:"example.duration"`
+	DefDuration time.Duration `value:"example.duration.def,default=500ms"`
+
+	Time time.Time  `value:"example.time,layout=2006-01-02"`
+	DefTime time.Time  `value:"example.time.def,layout=2006-01-02,default=2022-10-21"`
 
 	Properties  glue.Properties `inject`
 
@@ -102,7 +129,7 @@ func TestProperties(t *testing.T) {
 	err := p.Parse(propertiesFile)
 	require.NoError(t, err)
 
-	require.Equal(t, 6, p.Len())
+	require.Equal(t, 7, p.Len())
 
 	require.Equal(t, "string\n", p.GetString("example.str", ""))
 	require.Equal(t, 2, len(p.GetComments("example.str")))
@@ -155,8 +182,40 @@ func TestPlaceholderProperties(t *testing.T) {
 	require.Equal(t, propertiesFile, string(content))
 
 	require.NotNil(t, b.Properties)
-	require.Equal(t, 6, b.Properties.Len())
+	require.Equal(t, 7, b.Properties.Len())
 
+	/**
+	Test injected properties
+	 */
+
+	require.Equal(t, "string\n", b.Str)
+	require.Equal(t, 123, b.Int)
+	require.Equal(t, true, b.Bool)
+	require.Equal(t, float32(1.23), b.Float32)
+	require.Equal(t, 1.23, b.Float64)
+	require.Equal(t, time.Duration(300000000), b.Duration)
+
+	tm, err := time.Parse( "2006-01-02", "2022-10-22")
+	require.NoError(t, err)
+	require.Equal(t, tm, b.Time)
+
+	/**
+	Test default properties
+	 */
+	require.Equal(t, "def", b.DefStr)
+	require.Equal(t, 555, b.DefInt)
+	require.Equal(t, true, b.DefBool)
+	require.Equal(t, float32(5.55), b.DefFloat32)
+	require.Equal(t, 5.55, b.DefFloat64)
+	require.Equal(t, time.Duration(500000000), b.DefDuration)
+
+	tm, err = time.Parse( "2006-01-02", "2022-10-21")
+	require.NoError(t, err)
+	require.Equal(t, tm, b.DefTime)
+
+	/**
+	Should be the same object
+	 */
 	require.Equal(t, ctx.Properties(), b.Properties)
 
 }

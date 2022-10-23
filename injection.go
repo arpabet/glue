@@ -9,8 +9,17 @@ import (
 	"github.com/pkg/errors"
 	"reflect"
 	"sort"
+	"strconv"
 	"sync/atomic"
+	"time"
 	"unsafe"
+)
+
+var (
+
+   durationClass = reflect.TypeOf(time.Millisecond)
+   timeClass = reflect.TypeOf(time.Time{})
+
 )
 
 type injectionDef struct {
@@ -67,7 +76,7 @@ type injectionDef struct {
 type injection struct {
 
 	/*
-		Bean where injection is going to be happen
+	Bean where injection is going to be happen
 	*/
 	bean *bean
 
@@ -80,6 +89,62 @@ type injection struct {
 	Injection information
 	*/
 	injectionDef *injectionDef
+}
+
+type propInjectionDef struct {
+
+	/**
+	Class of that struct
+	*/
+	class reflect.Type
+
+	/**
+	Field number of that struct
+	*/
+	fieldNum int
+
+	/**
+	Field name where injection is going to be happen
+	*/
+	fieldName string
+
+	/**
+	Type of the field that is going to be injected
+	*/
+	fieldType reflect.Type
+
+	/**
+	Property name of injecting placeholder property
+	 */
+	propertyName string
+
+	/**
+	Default value of the property to inject
+	*/
+	defaultValue string
+
+	/**
+	Layout for date-time property
+	 */
+	layout  string
+}
+
+type propInjection struct {
+
+	/*
+	Bean where injection is going to be happen
+	*/
+	bean *bean
+
+	/**
+	Reflection value of the bean where injection is going to be happen
+	*/
+	value reflect.Value
+
+	/**
+	Injection information
+	*/
+	injectionDef *propInjectionDef
 }
 
 
@@ -392,3 +457,91 @@ func (t *injectionDef) String() string {
 		return fmt.Sprintf(" %v->%s ", t.class, t.fieldName)
 	}
 }
+
+func (t *propInjection) inject(properties Properties) error {
+
+	field := t.value.Field(t.injectionDef.fieldNum)
+	if !field.CanSet() {
+		return errors.Errorf("field '%s' in class '%v' is not public", t.injectionDef.fieldName, t.injectionDef.class)
+	}
+
+	strValue := properties.GetString(t.injectionDef.propertyName, t.injectionDef.defaultValue)
+
+	value, err := convertProperty(strValue, t.injectionDef.fieldType, t.injectionDef.layout)
+	if err != nil {
+		return errors.Errorf("property '%s' in class '%v' has convert error, %v", t.injectionDef.fieldName, t.injectionDef.class, err)
+	}
+
+	field.Set(value)
+	return nil
+}
+
+func convertProperty(s string, t reflect.Type, layout string) (val reflect.Value, err error) {
+	var v interface{}
+
+	switch {
+
+	case isDuration(t):
+		v, err = time.ParseDuration(s)
+
+	case isTime(t):
+		if layout == "" {
+			layout = time.RFC3339
+		}
+		v, err = time.Parse(layout, s)
+
+	case isBool(t):
+		v, err = parseBool(s)
+
+	case isString(t):
+		v, err = s, nil
+
+	case isFloat(t):
+		v, err = strconv.ParseFloat(s, 64)
+
+	case isInt(t):
+		v, err = strconv.ParseInt(s, 10, 64)
+
+	case isUint(t):
+		v, err = strconv.ParseUint(s, 10, 64)
+
+	default:
+		return reflect.Zero(t), fmt.Errorf("unsupported type %s", t)
+	}
+
+	if err != nil {
+		return reflect.Zero(t), err
+	}
+
+	return reflect.ValueOf(v).Convert(t), nil
+}
+
+func isBool(t reflect.Type) bool {
+	return t.Kind() == reflect.Bool
+}
+
+func isString(t reflect.Type) bool {
+	return t.Kind() == reflect.String
+}
+
+func isFloat(t reflect.Type) bool {
+	return t.Kind() == reflect.Float32 || t.Kind() == reflect.Float64
+}
+
+func isInt(t reflect.Type) bool {
+	return t.Kind() == reflect.Int || t.Kind() == reflect.Int8 || t.Kind() == reflect.Int16 || t.Kind() == reflect.Int32 || t.Kind() == reflect.Int64
+}
+
+func isUint(t reflect.Type) bool {
+	return t.Kind() == reflect.Uint || t.Kind() == reflect.Uint8 || t.Kind() == reflect.Uint16 || t.Kind() == reflect.Uint32 || t.Kind() == reflect.Uint64
+}
+
+func isDuration(t reflect.Type) bool {
+	return t == durationClass
+}
+
+func isTime(t reflect.Type) bool {
+	return t == timeClass
+}
+
+

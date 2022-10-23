@@ -34,6 +34,11 @@ type beanDef struct {
 	Fields that are going to be injected
 	*/
 	fields []*injectionDef
+
+	/**
+	Properties that are going to be injected
+	*/
+	properties []*propInjectionDef
 }
 
 type bean struct {
@@ -280,12 +285,14 @@ Investigate bean by using reflection
 */
 func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 	var fields []*injectionDef
+	var properties []*propInjectionDef
 	var anonymousFields []reflect.Type
 	valuePtr := reflect.ValueOf(obj)
 	value := valuePtr.Elem()
 	class := classPtr.Elem()
 	for j := 0; j < class.NumField(); j++ {
 		field := class.Field(j)
+
 		if field.Anonymous {
 			anonymousFields = append(anonymousFields, field.Type)
 			switch field.Type {
@@ -313,6 +320,50 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 				return nil, errors.Errorf("exposing by anonymous field '%s' in '%v' interface glue.Context is not allowed", field.Name, classPtr)
 			}
 		}
+
+		if valueTag, hasValueTag := field.Tag.Lookup("value"); hasValueTag {
+			if field.Anonymous {
+				return nil, errors.Errorf("injection to anonymous field '%s' in '%v' is not allowed", field.Name, classPtr)
+			}
+			var propertyName string
+			var defaultValue string
+			var layout string
+			pairs := strings.Split(valueTag, ",")
+			for i, pair := range pairs {
+				p := strings.TrimSpace(pair)
+				if i == 0 {
+					// property name
+					propertyName = p
+					continue
+				}
+				kv := strings.SplitN(p, "=", 2)
+				switch strings.TrimSpace(kv[0]) {
+				case "default":
+					if len(kv) > 1 {
+						defaultValue = strings.TrimSpace(kv[1])
+					}
+				case "layout":
+					if len(kv) > 1 {
+						layout = strings.TrimSpace(kv[1])
+					}
+				}
+			}
+			if propertyName == "" {
+				return nil, errors.Errorf("empty property name in field '%s' with type '%v' on position %d in %v with 'value' tag", field.Name, field.Type, j, classPtr)
+			}
+			def := &propInjectionDef{
+				class:     class,
+				fieldNum:  j,
+				fieldName: field.Name,
+				fieldType: field.Type,
+				propertyName: propertyName,
+				defaultValue: defaultValue,
+				layout: layout,
+			}
+			properties = append(properties, def)
+			continue
+		}
+
 		injectTag, hasInjectTag := field.Tag.Lookup("inject")
 		if field.Tag == "inject" || hasInjectTag {
 			if field.Anonymous {
@@ -326,7 +377,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 				pairs := strings.Split(injectTag, ",")
 				for _, pair := range pairs {
 					p := strings.TrimSpace(pair)
-					kv := strings.Split(p, "=")
+					kv := strings.SplitN(p, "=", 2)
 					switch strings.TrimSpace(kv[0]) {
 					case "bean":
 						if len(kv) > 1 {
@@ -362,7 +413,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 			if kind != reflect.Ptr && kind != reflect.Interface && kind != reflect.Func {
 				return nil, errors.Errorf("not a pointer, interface or function field type '%v' on position %d in %v with 'inject' tag", field.Type, j, classPtr)
 			}
-			injectDef := &injectionDef{
+			def := &injectionDef{
 				class:     class,
 				fieldNum:  j,
 				fieldName: field.Name,
@@ -374,7 +425,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 				qualifier: qualifier,
 				level:     level,
 			}
-			fields = append(fields, injectDef)
+			fields = append(fields, def)
 		}
 	}
 	name := classPtr.String()
@@ -400,6 +451,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 			classPtr:        classPtr,
 			anonymousFields: anonymousFields,
 			fields:          fields,
+			properties:      properties,
 		},
 		lifecycle: BeanCreated,
 	}, nil
