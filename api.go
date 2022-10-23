@@ -336,6 +336,11 @@ var PropertiesClass = reflect.TypeOf((*Properties)(nil))
 type Properties interface {
 
 	/**
+	Loads properties from map
+	 */
+	LoadMap(source map[string]interface{})
+
+	/**
 	Loads properties from input stream
 	 */
 	Load(reader io.Reader) error

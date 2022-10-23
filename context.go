@@ -7,6 +7,7 @@ package glue
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 	"log"
 	"reflect"
 	"runtime"
@@ -467,6 +468,7 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 func (t *context) loadProperties(propertySources []string) error {
 
 	for _, source := range propertySources {
+
 		if resource, ok := t.Resource(source); ok {
 
 			file, err := resource.Open()
@@ -474,7 +476,18 @@ func (t *context) loadProperties(propertySources []string) error {
 				return errors.Errorf("i/o error with placeholder properties resource '%s', %v", source, err)
 			}
 
-			err = t.properties.Load(file)
+			if isYamlFile(source) {
+
+				holder := make(map[string]interface{})
+				err = yaml.NewDecoder(file).Decode(holder)
+				if err == nil {
+					t.properties.LoadMap(holder)
+				}
+
+			} else {
+				err = t.properties.Load(file)
+			}
+
 			file.Close()
 			if err != nil {
 				return errors.Errorf("load error of placeholder properties resource '%s', %v", source, err)
@@ -486,6 +499,10 @@ func (t *context) loadProperties(propertySources []string) error {
 	}
 
 	return nil
+}
+
+func isYamlFile(fileName string) bool {
+	return strings.HasSuffix(fileName, ".yaml") || strings.HasSuffix(fileName, ".yml")
 }
 
 func (t *context) findDirectRecursive(requiredType reflect.Type) []beanlist {

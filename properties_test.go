@@ -33,13 +33,13 @@ example.time = 2022-10-22
 
 var propertiesFileYAML = `
 example:
-	str: "string\n"
-    int: 123
-    bool: true
-    float: 1.23
-    double: 1.23
-    duration: 300ms
-    time: 2022-10-22
+  str: "string\n"
+  int: 123
+  bool: true
+  float: 1.23
+  double: 1.23
+  duration: 300ms
+  time: "2022-10-22"
 `
 
 type beanWithProperties struct {
@@ -162,23 +162,30 @@ func TestProperties(t *testing.T) {
 
 func TestPlaceholderProperties(t *testing.T) {
 
+	validatePropertiesFile(t, "application.properties", propertiesFile)
+	validatePropertiesFile(t, "application.yaml", propertiesFileYAML)
+
+}
+
+func validatePropertiesFile(t *testing.T, fileName string, fileContent string) {
+
 	b := new(beanWithProperties)
 
 	ctx, err := glue.New(
 		glue.Verbose{ Log: log.Default() },
 		glue.ResourceSource{
 			Name: "resources",
-			AssetNames: []string{ "application.properties" },
-			AssetFiles: oneFile{ name: "application.properties", content: propertiesFile },
+			AssetNames: []string{ fileName },
+			AssetFiles: oneFile{ name: fileName, content: fileContent },
 		},
-		glue.PropertySource{Path: "resources:application.properties"},
+		glue.PropertySource{ Path: "resources:" + fileName },
 		b,
 	)
 
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	res, ok := ctx.Resource("resources:application.properties")
+	res, ok := ctx.Resource("resources:" + fileName)
 	require.True(t, ok)
 
 	file, err := res.Open()
@@ -186,7 +193,7 @@ func TestPlaceholderProperties(t *testing.T) {
 	defer file.Close()
 	content, err := ioutil.ReadAll(file)
 	require.NoError(t, err)
-	require.Equal(t, propertiesFile, string(content))
+	require.Equal(t, fileContent, string(content))
 
 	verifyPropertyBean(t, b)
 

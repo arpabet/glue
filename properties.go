@@ -37,6 +37,28 @@ func NewProperties() Properties {
 	}
 }
 
+func (t *properties) LoadMap(source map[string]interface{}) {
+	t.Lock()
+	defer t.Unlock()
+	t.loadMapRec(make([]byte, 0, 100), source)
+}
+
+func (t *properties) loadMapRec(stack []byte, m map[string]interface{}) {
+	for k, v := range m {
+		n := len(stack)
+		if n > 0 {
+			stack = append(stack, '.')
+		}
+		stack = append(stack, []byte(k)...)
+		if next, ok := v.(map[string]interface{}); ok {
+			t.loadMapRec(stack, next)
+		} else {
+			t.store[string(stack)] = fmt.Sprint(v)
+		}
+		stack = stack[:n]
+	}
+}
+
 func (t *properties) Load(reader io.Reader) error {
 	content, err := ioutil.ReadAll(reader)
 	if err != nil {
