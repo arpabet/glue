@@ -87,7 +87,7 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 	pointers := make(map[reflect.Type][]*injection)
 	interfaces := make(map[reflect.Type][]*injection)
 	var properties []*propInjection
-	var propertySources []string
+	var propertySources []*PropertySource
 	var propertyResolvers []PropertyResolver
 
 	ctx := &context{
@@ -102,7 +102,7 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 	}
 
 	if parent != nil {
-		ctx.properties.Merge(parent.properties)
+		ctx.properties.Extend(parent.properties)
 	}
 
 	// add context bean to registry
@@ -154,15 +154,16 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 			}
 		case PropertySource:
 			if ctx.verbose != nil {
-				ctx.verbose.Printf("PropertySource %s\n", instance.Path)
+				ctx.verbose.Printf("PropertySource %s %d\n", instance.Path, len(instance.Map))
 			}
-			propertySources = append(propertySources, instance.Path)
-			obj = &instance
+			ptr := &instance
+			propertySources = append(propertySources, ptr)
+			obj = ptr
 		case *PropertySource:
 			if ctx.verbose != nil {
-				ctx.verbose.Printf("PropertySource %s\n", instance.Path)
+				ctx.verbose.Printf("PropertySource %s %d\n", instance.Path, len(instance.Map))
 			}
-			propertySources = append(propertySources, instance.Path)
+			propertySources = append(propertySources, instance)
 		case PropertyResolver:
 			if ctx.verbose != nil {
 				ctx.verbose.Printf("PropertyResolver Priority %d\n", instance.Priority())
@@ -478,37 +479,45 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 
 }
 
-func (t *context) loadProperties(propertySources []string) error {
+func (t *context) loadProperties(propertySources []*PropertySource) error {
 
 	for _, source := range propertySources {
 
-		if resource, ok := t.Resource(source); ok {
+		if source.Path != "" {
 
-			file, err := resource.Open()
-			if err != nil {
-				return errors.Errorf("i/o error with placeholder properties resource '%s', %v", source, err)
-			}
+			if resource, ok := t.Resource(source.Path); ok {
 
-			if isYamlFile(source) {
+				file, err := resource.Open()
+				if err != nil {
+					return errors.Errorf("i/o error with placeholder properties resource '%s', %v", source, err)
+				}
 
-				holder := make(map[string]interface{})
-				err = yaml.NewDecoder(file).Decode(holder)
-				if err == nil {
-					t.properties.LoadMap(holder)
+				if isYamlFile(source.Path) {
+
+					holder := make(map[string]interface{})
+					err = yaml.NewDecoder(file).Decode(holder)
+					if err == nil {
+						t.properties.LoadMap(holder)
+					}
+
+				} else {
+					err = t.properties.Load(file)
+				}
+
+				file.Close()
+				if err != nil {
+					return errors.Errorf("load error of placeholder properties resource '%s', %v", source, err)
 				}
 
 			} else {
-				err = t.properties.Load(file)
+				return errors.Errorf("placeholder properties resource '%s' is not found", source)
 			}
-
-			file.Close()
-			if err != nil {
-				return errors.Errorf("load error of placeholder properties resource '%s', %v", source, err)
-			}
-
-		} else {
-			return errors.Errorf("placeholder properties resource '%s' is not found", source)
 		}
+
+		if source.Map != nil {
+			t.properties.LoadMap(source.Map)
+		}
+
 	}
 
 	return nil

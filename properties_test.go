@@ -304,6 +304,40 @@ func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 
 }
 
+func TestMergeProperties(t *testing.T) {
+	parent := glue.NewProperties()
+	parent.Set("parent", "parent")
+	parent.Set("same", "parent")
+
+	child := glue.NewProperties()
+	child.Set("child", "child")
+	child.Set("same", "child")
+	child.Extend(parent)
+
+	require.Equal(t, "parent", parent.GetString("parent", ""))
+	require.Equal(t, "parent", parent.GetString("same", ""))
+	require.Equal(t, 1, len(parent.PropertyResolvers()))
+
+	require.Equal(t, "parent", child.GetString("parent", ""))
+	require.Equal(t, "child", child.GetString("child", ""))
+	require.Equal(t, "child", child.GetString("same", ""))
+	require.Equal(t, 2, len(child.PropertyResolvers()))
+
+	for _, r := range parent.PropertyResolvers() {
+		require.Equal(t, parent, r)
+	}
+
+	for _, r := range child.PropertyResolvers() {
+		if r == parent {
+			require.Equal(t, 100, r.Priority())
+		}
+		if r == child {
+			require.Equal(t, 101, r.Priority())
+		}
+	}
+
+}
+
 func TestParseFileMode(t *testing.T) {
 
 	knownModes := map[string]os.FileMode{
@@ -324,3 +358,4 @@ func TestParseFileMode(t *testing.T) {
 	}
 
 }
+

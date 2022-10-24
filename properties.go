@@ -23,6 +23,8 @@ type properties struct {
 
 	sync.RWMutex
 
+	priority int
+
 	store map[string]string
 	comments map[string][]string
 
@@ -35,12 +37,19 @@ type properties struct {
 
 func NewProperties() Properties {
 	t := &properties {
+		priority: defaultPropertyResolverPriority,
 		store: make(map[string]string),
 		comments: make(map[string][]string),
 		resolvers: make([]PropertyResolver, 0, 10),
 	}
 	t.Register(t)
 	return t
+}
+
+func (t *properties) String() string {
+	t.RLock()
+	defer t.RUnlock()
+	return fmt.Sprintf("Properties{priority=%d,store=%d,comments=%d,resolvers=%d,errorHandler=%v}", t.priority, len(t.store), len(t.comments),len(t.resolvers),t.errorHandler != nil)
 }
 
 func (t *properties) Register(resolver PropertyResolver) {
@@ -63,7 +72,7 @@ func (t *properties) PropertyResolvers() []PropertyResolver {
 }
 
 func (t *properties) Priority() int {
-	return defaultPropertyResolverPriority
+	return t.priority
 }
 
 func (t *properties) LoadMap(source map[string]interface{}) {
@@ -178,30 +187,24 @@ func (t *properties) Dump() string {
 	return output.String()
 }
 
-func (t *properties) Merge(other Properties) {
-	m := other.Map()
-	r := other.PropertyResolvers()
-	o := other.(PropertyResolver)
+func (t *properties) Extend(parent Properties) {
+	r := parent.PropertyResolvers()
 	t.Lock()
 	defer t.Unlock()
-	for k, v := range m {
-		t.store[k] = v
-		comments := other.GetComments(k)
-		if len(comments) > 0 {
-			t.comments[k] = comments
-		}
-	}
-	var added bool
+	t.priority = max(t.priority, parent.Priority()) + 1
 	for _, item := range r {
-		if item != o {
-			t.resolvers = append(t.resolvers, item)
-			added = true
-		}
+		t.resolvers = append(t.resolvers, item)
 	}
-	if added && len(t.resolvers) > 1 {
-		sort.Slice(t.resolvers, func(i, j int) bool {
-			return t.resolvers[i].Priority() >= t.resolvers[j].Priority()
-		})
+	sort.Slice(t.resolvers, func(i, j int) bool {
+		return t.resolvers[i].Priority() >= t.resolvers[j].Priority()
+	})
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	} else {
+		return b
 	}
 }
 

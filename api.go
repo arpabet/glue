@@ -321,8 +321,12 @@ type PropertySource struct {
 	/**
 		Path to the properties file with prefix name of ResourceSource as "name:path".
 	 */
-
 	Path string
+
+	/**
+		Map of properties
+	 */
+	Map map[string]interface{}
 
 }
 
@@ -360,6 +364,7 @@ const defaultPropertyResolverPriority = 100
 var PropertiesClass = reflect.TypeOf((*Properties)(nil))
 
 type Properties interface {
+	PropertyResolver
 
 	/**
 	Register additional property resolver. It would be sorted by priority.
@@ -393,9 +398,9 @@ type Properties interface {
 	Dump() string
 
 	/**
-	Merge with other properties
+	Extends parent properties
 	 */
-	Merge(other Properties)
+	Extend(parent Properties)
 
 	/**
 	Gets length of the properties
