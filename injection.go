@@ -473,7 +473,7 @@ func (t *propInjection) inject(properties Properties) error {
 
 	value, err := convertProperty(strValue, t.injectionDef.fieldType, t.injectionDef.layout)
 	if err != nil {
-		return errors.Errorf("property '%s' in class '%v' has convert error, %v", t.injectionDef.fieldName, t.injectionDef.class, err)
+		return errors.Errorf("property '%s' in class '%v' has convert error, property resolvers %+v, %v", t.injectionDef.fieldName, t.injectionDef.class, properties.PropertyResolvers(), err)
 	}
 
 	field.Set(value)
@@ -493,7 +493,7 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 
 	v, err := convertProperty(strValue, t.fieldType, t.layout)
 	if err != nil {
-		return errors.Errorf("property '%s' in class '%v' has convert error, %v", t.fieldName, t.class, err)
+		return errors.Errorf("property '%s' in class '%v' has convert error, property resolvers %+v, %v", t.fieldName, t.class, properties.PropertyResolvers(), err)
 	}
 
 	field.Set(v)
