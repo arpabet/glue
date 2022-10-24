@@ -365,6 +365,7 @@ type Properties interface {
 	Register additional property resolver. It would be sorted by priority.
 	 */
 	Register(PropertyResolver)
+	PropertyResolvers() []PropertyResolver
 
 	/**
 	Loads properties from map

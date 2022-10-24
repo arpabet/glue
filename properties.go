@@ -54,6 +54,14 @@ func (t *properties) Register(resolver PropertyResolver) {
 	}
 }
 
+func (t *properties) PropertyResolvers() []PropertyResolver {
+	t.RLock()
+	defer t.RUnlock()
+	buf := make([]PropertyResolver, len(t.resolvers))
+	copy(buf, t.resolvers)
+	return buf
+}
+
 func (t *properties) Priority() int {
 	return defaultPropertyResolverPriority
 }
@@ -172,6 +180,8 @@ func (t *properties) Dump() string {
 
 func (t *properties) Merge(other Properties) {
 	m := other.Map()
+	r := other.PropertyResolvers()
+	o := other.(PropertyResolver)
 	t.Lock()
 	defer t.Unlock()
 	for k, v := range m {
@@ -180,6 +190,18 @@ func (t *properties) Merge(other Properties) {
 		if len(comments) > 0 {
 			t.comments[k] = comments
 		}
+	}
+	var added bool
+	for _, item := range r {
+		if item != o {
+			t.resolvers = append(t.resolvers, item)
+			added = true
+		}
+	}
+	if added && len(t.resolvers) > 1 {
+		sort.Slice(t.resolvers, func(i, j int) bool {
+			return t.resolvers[i].Priority() >= t.resolvers[j].Priority()
+		})
 	}
 }
 
