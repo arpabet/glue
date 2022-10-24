@@ -460,7 +460,11 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 	 */
 	for _, inject := range properties {
 		if ctx.verbose != nil {
-			ctx.verbose.Printf("Inject Property '%s' in '%s'\n", inject.injectionDef.propertyName, inject.bean.name)
+			if inject.injectionDef.defaultValue != "" {
+				ctx.verbose.Printf("Inject Property '%s' default '%s' in '%s'\n", inject.injectionDef.propertyName, inject.injectionDef.defaultValue, inject.bean.name)
+			} else {
+				ctx.verbose.Printf("Inject Property '%s' in '%s'\n", inject.injectionDef.propertyName, inject.bean.name)
+			}
 		}
 		if err := inject.inject(ctx.properties); err != nil {
 			return nil, errors.Errorf("property '%s' in '%s' injection error, %v", inject.injectionDef.propertyName, inject.bean.name, err)
