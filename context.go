@@ -17,6 +17,8 @@ import (
 	"time"
 )
 
+var DefaultCloseTimeout = time.Minute
+
 type context struct {
 
 	/**
@@ -475,26 +477,30 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 	PostConstruct beans
 	 */
 	if err := ctx.postConstruct(); err != nil {
-		ch := make(chan error)
-		go func() {
-			ch <- ctx.Close()
-			close(ch)
-		}()
-		select {
-			case e := <- ch:
-				if ctx.verbose != nil {
-					ctx.verbose.Printf("Close context error, %v\n", e)
-				}
-			case <- time.After(time.Second):
-				if ctx.verbose != nil {
-					ctx.verbose.Printf("Close context timeout error\n")
-				}
-		}
+		ctx.closeWithTimeout(DefaultCloseTimeout)
 		return nil, err
 	} else {
 		return ctx, nil
 	}
 
+}
+
+func (t *context) closeWithTimeout(timeout time.Duration) {
+	ch := make(chan error)
+	go func() {
+		ch <- t.Close()
+		close(ch)
+	}()
+	select {
+	case e := <- ch:
+		if e != nil && t.verbose != nil {
+			t.verbose.Printf("Close context error, %v\n", e)
+		}
+	case <- time.After(timeout):
+		if t.verbose != nil {
+			t.verbose.Printf("Close context timeout error.\n")
+		}
+	}
 }
 
 func (t *context) loadProperties(propertySources []*PropertySource) error {
