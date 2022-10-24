@@ -92,6 +92,8 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 	var properties []*propInjection
 	var propertySources []*PropertySource
 	var propertyResolvers []PropertyResolver
+	var primaryList []*bean
+	var secondaryList []*bean
 
 	ctx = &context{
 		parent: parent,
@@ -133,6 +135,8 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 	// scan
 	err = forEach("", scan, func(pos string, obj interface{}) (err error) {
 
+		var resolver bool
+
 		switch instance := obj.(type) {
 		case Verbose:
 			ctx.verbose = instance.Log
@@ -172,6 +176,7 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 				ctx.verbose.Printf("PropertyResolver Priority %d\n", instance.Priority())
 			}
 			propertyResolvers = append(propertyResolvers, instance)
+			resolver = true
 		default:
 		}
 
@@ -314,12 +319,23 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 				f.instances = []*bean {elemBean}
 				// we can have singleton or multiple beans in context produced by this factory, let's allocate reference for injections even if those beans are still not exist
 				registerBean(core, elemClassPtr, elemBean)
+				secondaryList = append(secondaryList, elemBean)
 			}
 
 			/*
 				Register bean itself
 			*/
 			registerBean(core, classPtr, objBean)
+
+			/**
+				Initialize property resolver beans at first
+			 */
+			if resolver {
+				primaryList = append(primaryList, objBean)
+			} else {
+				secondaryList = append(secondaryList, objBean)
+			}
+
 		case reflect.Func:
 
 			if ctx.verbose != nil {
@@ -329,15 +345,18 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 			/*
 				Register function in context
 			*/
-			registerBean(core, classPtr, &bean{
+			objBean := &bean{
 				name:     classPtr.String(),
 				obj:      obj,
 				valuePtr: reflect.ValueOf(obj),
 				beanDef: &beanDef{
 					classPtr: classPtr,
 				},
-				lifecycle: BeanCreated,
-			})
+				lifecycle: BeanInitialized,
+			}
+
+			registerBean(core, classPtr, objBean)
+
 		default:
 			return errors.Errorf("instance could be a pointer or function, but was '%s' on position '%s' of type '%v'", classPtr.Kind().String(), pos, classPtr)
 		}
@@ -476,7 +495,7 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 	/**
 	PostConstruct beans
 	 */
-	if err := ctx.postConstruct(); err != nil {
+	if err := ctx.postConstruct(primaryList, secondaryList); err != nil {
 		ctx.closeWithTimeout(DefaultCloseTimeout)
 		return nil, err
 	} else {
@@ -876,7 +895,7 @@ func (t *context) addDisposable(bean *bean) {
 	}
 }
 
-func (t *context) postConstruct() (err error) {
+func (t *context) postConstruct(lists... []*bean) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -884,11 +903,12 @@ func (t *context) postConstruct() (err error) {
 		}
 	}()
 
-	for _, list := range t.core {
+	for _, list := range lists {
 		if err = t.constructBeanList(list, nil); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
