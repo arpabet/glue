@@ -29,6 +29,7 @@ example.float = 1.23
 example.double = 1.23
 example.duration = 300ms
 example.time = 2022-10-22
+example.filemode = -rwxrwxr-x
 `
 
 var propertiesFileYAML = `
@@ -40,7 +41,10 @@ example:
   double: 1.23
   duration: 300ms
   time: "2022-10-22"
+  filemode: -rwxrwxr-x
 `
+
+const expectedPropertiesNum = 8
 
 type beanWithProperties struct {
 
@@ -71,6 +75,10 @@ type beanWithProperties struct {
 	Time time.Time  `value:"example.time,layout=2006-01-02"`
 	DefTime time.Time  `value:"example.time.def,layout=2006-01-02,default=2022-10-21"`
 	ArrTime []time.Time  `value:"example.time.arr,layout=2006-01-02,default=2022-10-21;2022-10-22"`
+
+	FileMode os.FileMode  `value:"example.filemode"`
+	DefFileMode os.FileMode  `value:"example.filemode.def,default=-rw-rw-r--"`
+	ArrFileMode []os.FileMode  `value:"example.filemode.arr,default=-rw-rw-r--;-rw-rw-rw-"`
 
 	Properties  glue.Properties `inject`
 
@@ -154,9 +162,6 @@ func TestPropertyResolver(t *testing.T) {
 	require.NoError(t, err)
 
 	p.Register(&onePropertyResolver{ key: "new.property", value: "new.value"})
-
-	p.GetString("new.property", "")
-
 	require.Equal(t, "new.value", p.GetString("new.property", ""))
 }
 
@@ -166,7 +171,7 @@ func TestProperties(t *testing.T) {
 	err := p.Parse(propertiesFile)
 	require.NoError(t, err)
 
-	require.Equal(t, 7, p.Len())
+	require.Equal(t, expectedPropertiesNum, p.Len())
 
 	require.Equal(t, "string\n", p.GetString("example.str", ""))
 	require.Equal(t, 2, len(p.GetComments("example.str")))
@@ -186,7 +191,10 @@ func TestProperties(t *testing.T) {
 	require.Equal(t, time.Duration(300000000), p.GetDuration("example.duration", 0.0))
 	require.Equal(t, 0, len(p.GetComments("example.double")))
 
-	//println(p.Dump())
+	require.Equal(t, os.FileMode(0775), p.GetFileMode("example.filemode", os.FileMode(0775)))
+	require.Equal(t, 0, len(p.GetComments("example.filemode")))
+
+	println(p.Dump())
 
 }
 
@@ -246,7 +254,7 @@ func validatePropertiesFile(t *testing.T, fileName string, fileContent string) {
 func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 
 	require.NotNil(t, b.Properties)
-	require.Equal(t, 7, b.Properties.Len())
+	require.Equal(t, expectedPropertiesNum, b.Properties.Len())
 
 	/**
 	Test injected properties
@@ -263,6 +271,8 @@ func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 	require.NoError(t, err)
 	require.Equal(t, tm22, b.Time)
 
+	require.Equal(t, os.FileMode(0775), b.FileMode)
+
 	/**
 	Test default properties
 	*/
@@ -277,6 +287,8 @@ func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 	require.NoError(t, err)
 	require.Equal(t, tm21, b.DefTime)
 
+	require.Equal(t, os.FileMode(0664), b.DefFileMode)
+
 	/**
 	Test array properties
 	*/
@@ -287,5 +299,28 @@ func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 	require.Equal(t, []float64{1.2, 1.3}, b.ArrFloat64)
 	require.Equal(t, []time.Duration{100000000, 200000000}, b.ArrDuration)
 	require.Equal(t, []time.Time{tm21, tm22}, b.ArrTime)
+
+	require.Equal(t, []os.FileMode { os.FileMode(0664), os.FileMode(0666) }, b.ArrFileMode)
+
+}
+
+func TestParseFileMode(t *testing.T) {
+
+	knownModes := map[string]os.FileMode{
+		"-rwxrwxr-x":     os.FileMode(0775),
+		"-rw-rw-r--":    os.FileMode(0664),
+		"-rw-rw-rw-":    os.FileMode(0666),
+		"-rwxrwx---":    os.FileMode(0770),
+	}
+
+	for expected, mode := range knownModes {
+
+		str := mode.String()
+		require.Equal(t, expected, str)
+
+		//actual := glue.parseFileMode(str)
+		//require.Equal(t, mode, actual, mode.String())
+
+	}
 
 }

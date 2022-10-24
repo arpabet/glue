@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -344,6 +345,14 @@ func (t *properties) GetDuration(key string, def time.Duration) time.Duration {
 	}
 }
 
+func (t *properties) GetFileMode(key string, def os.FileMode) os.FileMode {
+	if str, ok := t.Get(key); ok {
+		return parseFileMode(str)
+	} else {
+		return def
+	}
+}
+
 func (t *properties) Set(key string, value string) {
 	t.Lock()
 	defer t.Unlock()
@@ -425,4 +434,30 @@ func parseBool(str string) (bool, error) {
 		return false, nil
 	}
 	return false, errors.Errorf("invalid syntax '%s'", str)
+}
+
+/**
+Parses only os.Unix file mode with 0777 mask
+*/
+func parseFileMode(s string) os.FileMode {
+
+	var m uint32
+
+	const rwx = "rwxrwxrwx"
+	off := len(s) - len(rwx)
+	if off < 0 {
+		buf := []byte("---------")
+		copy(buf[-off:], s)
+		s = string(buf)
+	} else {
+		s = s[off:]
+	}
+
+	for i, c := range rwx {
+		if byte(c) == s[i] {
+			m |= 1<<uint(9-1-i)
+		}
+	}
+
+	return os.FileMode(m)
 }

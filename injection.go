@@ -7,6 +7,8 @@ package glue
 import (
 	"fmt"
 	"github.com/pkg/errors"
+	"io/fs"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -20,7 +22,8 @@ var (
 
    durationClass = reflect.TypeOf(time.Millisecond)
    timeClass = reflect.TypeOf(time.Time{})
-
+   osFileModeClass = reflect.TypeOf(os.FileMode(0777))
+   fsFileModeClass = reflect.TypeOf(fs.FileMode(0777))
 )
 
 type injectionDef struct {
@@ -524,6 +527,9 @@ func convertProperty(s string, t reflect.Type, layout string) (val reflect.Value
 		}
 		v, err = time.Parse(layout, s)
 
+	case isFileMode(t):
+		v, err = parseFileMode(s), nil
+
 	case isBool(t):
 		v, err = parseBool(s)
 
@@ -576,6 +582,10 @@ func isDuration(t reflect.Type) bool {
 
 func isTime(t reflect.Type) bool {
 	return t == timeClass
+}
+
+func isFileMode(t reflect.Type) bool {
+	return t == osFileModeClass || t == fsFileModeClass
 }
 
 func isArray(t reflect.Type) bool {

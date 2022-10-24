@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"reflect"
 	"time"
 )
@@ -429,6 +430,7 @@ type Properties interface {
 	GetFloat(key string, def float32) float32
 	GetDouble(key string, def float64) float64
 	GetDuration(key string, def time.Duration) time.Duration
+	GetFileMode(key string, def os.FileMode) os.FileMode
 
 	// properties conversion error handler
 	GetErrorHandler() func(string, error)
