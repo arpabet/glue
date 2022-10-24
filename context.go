@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type context struct {
@@ -76,7 +77,7 @@ func (t *context) Parent() (Context, bool) {
 	}
 }
 
-func createContext(parent *context, scan []interface{}) (Context, error) {
+func createContext(parent *context, scan []interface{}) (ctx *context, err error) {
 
 	prev := runtime.GOMAXPROCS(1)
 	defer func() {
@@ -90,7 +91,7 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 	var propertySources []*PropertySource
 	var propertyResolvers []PropertyResolver
 
-	ctx := &context{
+	ctx = &context{
 		parent: parent,
 		core:   core,
 		registry: registry{
@@ -128,7 +129,7 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 	core[propertiesBean.beanDef.classPtr] = []*bean {propertiesBean}
 
 	// scan
-	err := forEach("", scan, func(pos string, obj interface{}) (err error) {
+	err = forEach("", scan, func(pos string, obj interface{}) (err error) {
 
 		switch instance := obj.(type) {
 		case Verbose:
@@ -443,7 +444,6 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 	 */
 	if len(propertySources) > 0 {
 		if err := ctx.loadProperties(propertySources); err != nil {
-			ctx.Close()
 			return nil, err
 		}
 	}
@@ -475,7 +475,21 @@ func createContext(parent *context, scan []interface{}) (Context, error) {
 	PostConstruct beans
 	 */
 	if err := ctx.postConstruct(); err != nil {
-		ctx.Close()
+		ch := make(chan error)
+		go func() {
+			ch <- ctx.Close()
+			close(ch)
+		}()
+		select {
+			case e := <- ch:
+				if ctx.verbose != nil {
+					ctx.verbose.Printf("Close context error, %v\n", e)
+				}
+			case <- time.After(time.Second):
+				if ctx.verbose != nil {
+					ctx.verbose.Printf("Close context timeout error\n")
+				}
+		}
 		return nil, err
 	} else {
 		return ctx, nil
