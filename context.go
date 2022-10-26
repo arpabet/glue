@@ -475,23 +475,7 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 	for _, r := range propertyResolvers {
 		ctx.properties.Register(r)
 	}
-
-	/**
-	Inject properties
-	 */
-	for _, inject := range properties {
-		if ctx.verbose != nil {
-			if inject.injectionDef.defaultValue != "" {
-				ctx.verbose.Printf("Inject Property '%s' default '%s' in '%s'\n", inject.injectionDef.propertyName, inject.injectionDef.defaultValue, inject.bean.name)
-			} else {
-				ctx.verbose.Printf("Inject Property '%s' in '%s'\n", inject.injectionDef.propertyName, inject.bean.name)
-			}
-		}
-		if err := inject.inject(ctx.properties); err != nil {
-			return nil, errors.Errorf("property '%s' in '%s' injection error, %v", inject.injectionDef.propertyName, inject.bean.name, err)
-		}
-	}
-
+	
 	/**
 	PostConstruct beans
 	 */
@@ -873,6 +857,22 @@ func (t *context) constructBean(bean *bean, stack []*bean) (err error) {
 			return errors.Errorf("bean '%v' was not created by factory ctor '%v'", bean, bean.beenFactory.factoryClassPtr)
 		}
 		return nil
+	}
+
+	// inject properties
+	if len(bean.beanDef.properties) > 0 {
+		value := bean.valuePtr.Elem()
+		for _, propertyDef := range bean.beanDef.properties {
+			if propertyDef.defaultValue != "" {
+				t.verbose.Printf("Inject Property '%s' default '%s' in '%v'\n", propertyDef.propertyName, propertyDef.defaultValue, bean)
+			} else {
+				t.verbose.Printf("Inject Property '%s' in '%v'\n", propertyDef.propertyName, bean)
+			}
+			err = propertyDef.inject(&value, t.properties)
+			if err != nil {
+				return errors.Errorf("property '%s' injection for bean '%v' failed, %s, %v", propertyDef.propertyName, bean, getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
+			}
+		}
 	}
 
 	if hasConstructor {

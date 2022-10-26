@@ -462,24 +462,6 @@ func (t *injectionDef) String() string {
 	}
 }
 
-func (t *propInjection) inject(properties Properties) error {
-
-	field := t.value.Field(t.injectionDef.fieldNum)
-	if !field.CanSet() {
-		return errors.Errorf("field '%s' in class '%v' is not public", t.injectionDef.fieldName, t.injectionDef.class)
-	}
-
-	strValue := properties.GetString(t.injectionDef.propertyName, t.injectionDef.defaultValue)
-
-	value, err := convertProperty(strValue, t.injectionDef.fieldType, t.injectionDef.layout)
-	if err != nil {
-		return errors.Errorf("property '%s' in class '%v' has convert error, property resolvers %+v, %v", t.injectionDef.fieldName, t.injectionDef.class, properties.PropertyResolvers(), err)
-	}
-
-	field.Set(value)
-	return nil
-}
-
 // runtime injection
 func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) error {
 

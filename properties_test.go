@@ -51,34 +51,42 @@ type beanWithProperties struct {
 	Str  string `value:"example.str"`
 	DefStr  string `value:"example.str.def,default=def"`
 	ArrStr []string  `value:"example.str.arr,default=a;b;c"`
+	//StrFn func() (string, error) `value:"example.str"`
 
 	Int  int `value:"example.int"`
 	DefInt  int `value:"example.int.def,default=555"`
 	ArrInt  []int `value:"example.int.arr,default=1;2;3"`
+	//IntFn   func() (int, error) `value:"example.int"`
 
 	Bool bool `value:"example.bool"`
 	DefBool  bool `value:"example.bool.def,default=true"`
 	ArrBool  []bool `value:"example.bool.arr,default=true;false;true"`
+	//BoolFn   func() (bool, error) `value:"example.int"`
 
 	Float32 float32 `value:"example.float"`
 	DefFloat32 float32 `value:"example.float.def,default=5.55"`
 	ArrFloat32 []float32 `value:"example.float.arr,default=1.2;1.3"`
+	//Float32Fn   func() (float32, error) `value:"example.float"`
 
 	Float64 float64 `value:"example.double"`
 	DefFloat64 float64 `value:"example.double.def,default=5.55"`
 	ArrFloat64 []float64 `value:"example.double.arr,default=1.2;1.3"`
+	//Float64Fn func() (float64, error) `value:"example.double"`
 
 	Duration time.Duration `value:"example.duration"`
 	DefDuration time.Duration `value:"example.duration.def,default=500ms"`
 	ArrDuration []time.Duration `value:"example.duration.arr,default=100ms;200ms"`
+	//DurationFn func() (time.Duration, error) `value:"example.duration"`
 
 	Time time.Time  `value:"example.time,layout=2006-01-02"`
 	DefTime time.Time  `value:"example.time.def,layout=2006-01-02,default=2022-10-21"`
 	ArrTime []time.Time  `value:"example.time.arr,layout=2006-01-02,default=2022-10-21;2022-10-22"`
+	//TimeFn func() (time.Time, error) `value:"example.time,layout=2006-01-02"`s
 
 	FileMode os.FileMode  `value:"example.filemode"`
 	DefFileMode os.FileMode  `value:"example.filemode.def,default=-rw-rw-r--"`
 	ArrFileMode []os.FileMode  `value:"example.filemode.arr,default=-rw-rw-r--;-rw-rw-rw-"`
+	//FileModeFn func() (time.Time, error) `value:"example.filemode"`
 
 	Properties  glue.Properties `inject`
 
