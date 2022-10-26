@@ -89,7 +89,6 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 	core := make(map[reflect.Type][]*bean)
 	pointers := make(map[reflect.Type][]*injection)
 	interfaces := make(map[reflect.Type][]*injection)
-	var properties []*propInjection
 	var propertySources []*PropertySource
 	var propertyResolvers []PropertyResolver
 	var primaryList []*bean
@@ -276,24 +275,7 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 					}
 				}
 			}
-
-			/**
-			Enumerate injection properties
-			 */
-			if len(objBean.beanDef.properties) > 0 {
-				value := objBean.valuePtr.Elem()
-				for _, injectDef := range objBean.beanDef.properties {
-					if ctx.verbose != nil {
-						if injectDef.defaultValue != "" {
-							ctx.verbose.Printf("	Property %v %s default %s\n", injectDef.fieldType, injectDef.propertyName, injectDef.defaultValue)
-						} else {
-							ctx.verbose.Printf("	Property %v %s\n", injectDef.fieldType, injectDef.propertyName)
-						}
-					}
-					properties = append(properties, &propInjection{ objBean, value, injectDef })
-				}
-			}
-
+			
 			/*
 				Register factory if needed
 			*/
@@ -475,7 +457,7 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 	for _, r := range propertyResolvers {
 		ctx.properties.Register(r)
 	}
-	
+
 	/**
 	PostConstruct beans
 	 */
@@ -863,10 +845,12 @@ func (t *context) constructBean(bean *bean, stack []*bean) (err error) {
 	if len(bean.beanDef.properties) > 0 {
 		value := bean.valuePtr.Elem()
 		for _, propertyDef := range bean.beanDef.properties {
-			if propertyDef.defaultValue != "" {
-				t.verbose.Printf("Inject Property '%s' default '%s' in '%v'\n", propertyDef.propertyName, propertyDef.defaultValue, bean)
-			} else {
-				t.verbose.Printf("Inject Property '%s' in '%v'\n", propertyDef.propertyName, bean)
+			if t.verbose != nil {
+				if propertyDef.defaultValue != "" {
+					t.verbose.Printf("Inject Property '%s' default '%s' in '%v'\n", propertyDef.propertyName, propertyDef.defaultValue, bean)
+				} else {
+					t.verbose.Printf("Inject Property '%s' in '%v'\n", propertyDef.propertyName, bean)
+				}
 			}
 			err = propertyDef.inject(&value, t.properties)
 			if err != nil {

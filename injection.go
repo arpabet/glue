@@ -133,25 +133,6 @@ type propInjectionDef struct {
 	layout  string
 }
 
-type propInjection struct {
-
-	/*
-	Bean where injection is going to be happen
-	*/
-	bean *bean
-
-	/**
-	Reflection value of the bean where injection is going to be happen
-	*/
-	value reflect.Value
-
-	/**
-	Injection information
-	*/
-	injectionDef *propInjectionDef
-}
-
-
 /*
 	Prepare beans for the specific level of injection
  */
