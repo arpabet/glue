@@ -1,13 +1,13 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
-	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -30,7 +30,6 @@ func (t *secondBean) Run() {
 func TestBeanByPointer(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&firstBean{},
 		&secondBean{testing: t},
 	)
@@ -47,7 +46,6 @@ func TestBeanByPointer(t *testing.T) {
 func TestMultipleBeanByPointer(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&firstBean{},
 		&firstBean{},
 		&secondBean{testing: t},
@@ -63,7 +61,6 @@ func TestMultipleBeanByPointer(t *testing.T) {
 func TestSearchBeanByPointerNotFound(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&firstBean{},
 	)
 	require.NoError(t, err)
@@ -77,7 +74,6 @@ func TestSearchBeanByPointerNotFound(t *testing.T) {
 func TestBeanByStruct(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		firstBean{},
 		&secondBean{testing: t},
 	)
@@ -119,7 +115,6 @@ func (t *secondServiceImpl) Second() {
 func TestBeanByInterface(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&firstServiceImpl{testing: t},
 		&secondServiceImpl{testing: t},
 
@@ -155,7 +150,6 @@ func (t *firstService2Impl) First() {
 func TestMultipleBeansByInterface(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&firstServiceImpl{testing: t},
 		&firstService2Impl{testing: t},
 
@@ -174,7 +168,6 @@ func TestMultipleBeansByInterface(t *testing.T) {
 func TestSpecificBeanByInterface(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&firstServiceImpl{testing: t},
 		&firstService2Impl{testing: t},
 
@@ -196,7 +189,6 @@ func TestSpecificBeanByInterface(t *testing.T) {
 func TestNotFoundSpecificBeanByInterface(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&firstServiceImpl{testing: t},
 		&firstService2Impl{testing: t},
 

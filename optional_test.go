@@ -1,13 +1,13 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
-	"log"
 	"reflect"
 	"testing"
 )
@@ -24,7 +24,6 @@ type beanB struct {
 func TestOptionalBeanByPointer(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&beanB{testing: t},
 	)
 	require.NoError(t, err)
@@ -59,7 +58,6 @@ func (t *beanBServiceImpl) B() {
 func TestOptionalBeanByInterface(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&beanBServiceImpl{testing: t},
 		&struct {
 			BeanBService BeanBService `inject`

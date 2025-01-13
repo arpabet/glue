@@ -1,13 +1,13 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
-	"log"
 	"reflect"
 	"testing"
 )
@@ -40,7 +40,6 @@ func TestBeanReload(t *testing.T) {
 
 	// initialization order
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		reBean,
 		tBean,
 	)

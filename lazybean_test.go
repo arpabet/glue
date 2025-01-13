@@ -1,13 +1,13 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
-	"log"
 	"reflect"
 	"testing"
 )
@@ -94,7 +94,6 @@ func (t *dosServiceImpl) Dos() {
 func TestLazyBeanInterface(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		newUnoService(t),
 		newDosService(t),
 
@@ -172,7 +171,6 @@ func (t *unService) Un() {
 func TestLazyBeanPointers(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&zeroService{testing: t},
 		&unService{testing: t},
 	)

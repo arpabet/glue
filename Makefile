@@ -8,3 +8,7 @@ version:
 build: version
 	go test -cover ./...
 	go build -v
+
+update:
+	go get -u ./...
+

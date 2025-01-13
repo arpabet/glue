@@ -1,14 +1,14 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
 	"errors"
-	"github.com/schwid/glue"
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"log"
 	"net/http"
 	"strings"
 	"testing"
@@ -24,7 +24,6 @@ func (t fileSystemStub) Open(name string) (http.File, error) {
 func TestResourceMerge(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		glue.ResourceSource{
 			Name: "resources",
 			AssetNames: []string{ "a.txt", "b/c.txt" },
@@ -65,7 +64,6 @@ func TestResourceMerge(t *testing.T) {
 func TestResourceMergeConflict(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		glue.ResourceSource{
 			Name: "resources",
 			AssetNames: []string{ "a.txt", "b/c.txt" },
@@ -88,7 +86,6 @@ func TestResourceMergeConflict(t *testing.T) {
 func TestResourceParent(t *testing.T) {
 
 	parent, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		glue.ResourceSource{
 			Name: "resources",
 			AssetNames: []string{ "a.txt", "b/c.txt" },

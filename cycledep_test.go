@@ -1,13 +1,13 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
-	"log"
 	"testing"
 )
 
@@ -30,7 +30,6 @@ type cPlainBean struct {
 func TestPlainBeanCycle(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&aPlainBean{},
 		&bPlainBean{},
 		&cPlainBean{},
@@ -49,7 +48,6 @@ func TestSelfDepCycle(t *testing.T) {
 	self := &selfDepBean{}
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		self,
 	)
 	require.NoError(t, err)

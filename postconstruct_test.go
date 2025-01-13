@@ -1,14 +1,14 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
 	"errors"
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
-	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -94,7 +94,6 @@ func (t *beanClient) Destroy() error {
 func TestPostConstruct(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&beanClient{testing: t},
 		&beanServer{},
 		/**
@@ -118,7 +117,6 @@ func TestPostConstruct(t *testing.T) {
 func TestPostConstructWithError(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&beanClient{testing: t},
 		&beanServer{throwError: true},
 		/**
@@ -181,7 +179,6 @@ func (t *cService) PostConstruct() error {
 func TestPostConstructCycle(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&aService{testing: t},
 		&bService{testing: t},
 		&cService{testing: t},

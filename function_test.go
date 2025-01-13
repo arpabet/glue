@@ -1,13 +1,13 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
-	"log"
 	"reflect"
 	"testing"
 )
@@ -23,7 +23,6 @@ func TestPrimitiveFunctions(t *testing.T) {
 	holder := &functionHolder{}
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		holder,
 		func() int { return 123 },
 		func() []string { return []string{"a", "b"} },
@@ -78,7 +77,6 @@ func TestFunctions(t *testing.T) {
 	srv := &funcServiceImpl{}
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		clientBeans,
 		serverBeans,
 		srv,

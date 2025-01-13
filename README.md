@@ -1,5 +1,7 @@
 # glue
 
+![build workflow](https://go.arpabet.com/glue/actions/workflows/build.yaml/badge.svg)
+
 Dependency Injection Runtime Framework for Golang inspired by Spring Framework in Java.
 
 All injections happen on runtime and took O(n*m) complexity, where n - number of interfaces, m - number of services.
@@ -50,11 +52,12 @@ Glue Framework supports following types for beans:
 * Interface
 * Function
 
-Glue Framework does not support Struct type as the bean instance type. 
+Glue Framework does not support Struct type as the bean instance type, in order to inject the object please use pointer on it. 
 
 ### Function
 
-Function in golang is the first type citizen, therefore Bean Framework supports injection of functions by default.
+Function in golang is the first type citizen, therefore Bean Framework supports injection of functions by default. But you can have only unique args list of them.
+This funtionality is perfect to inject Lazy implementations.
 
 Example:
 ```
@@ -73,7 +76,7 @@ defer ctx.Close()
 ### Collections 
  
 Glue Framework supports injection of bean collections including Slice and Map.
-All collection injections would be treated as collection of glue. 
+All collection injections require being a collection of beans. 
 If you need to inject collection of primitive types, please use function injection.
 
 Example:
@@ -96,8 +99,9 @@ Element also can implement glue.OrderedBean to assign the order for the bean in 
  
 ### glue.InitializingBean
 
-For each bean that implements InitializingBean interface, Glue Framework invokes PostConstruct() method at the time of Construction of the bean.
-This functionality could be used for safe initialization.
+For each bean that implements InitializingBean interface, Glue Framework invokes PostConstruct() method each the time of bean initialization.
+Glue framework guarantees that at the time of calling this function all injected fields are not nil and all injected beans are initialized.
+This functionality could be used for safe bean initialization logic.
 
 Example:
 ```
@@ -114,13 +118,14 @@ func (t *component) PostConstruct() error {
         // for normal required dependency can not be happened, unless `lazy` field declared
         return errors.New("not initialized dependency")
     }
+    // for normal required dependency Glue guarantee all fields are not nil and initialized
     return t.Dependency.DoSomething()
 }
 ``` 
 
 ### glue.DisposableBean
 
-For each bean that implements DisposableBean interface, Glue Framework invokes Destroy() method at the time of closing context, in reverse order how beans were initialized.
+For each bean that implements DisposableBean interface, Glue Framework invokes Destroy() method at the time of closing context in reverse order of how beans were initialized.
 
 Example:
 ```
@@ -129,15 +134,15 @@ type component struct {
 }
 
 func (t *component) Destroy() error {
-    // guarantees that dependency still not destroyed by calling in backwards initialization order
+    // guarantees that dependency still not destroyed by calling it in backwards initialization order
     return t.Dependency.DoSomething()
 }
 ```
 
 ### glue.NamedBean
 
-For each bean that implements NamedBean interface, Glue Framework will use returned bean name of calling function BeanName() instead of class name of the bean.
-Together with qualifier gives ability to select that bean to inject in application context. 
+For each bean that implements NamedBean interface, Glue Framework will use a returned bean name by calling function BeanName() instead of class name of the bean.
+Together with qualifier this gives ability to select that bean particular to inject to the application context. 
 
 Example:
 ```
@@ -302,7 +307,7 @@ Lookup level defines how deep we will go in to beans:
 ### Contributions
 
 If you find a bug or issue, please create a ticket.
-For now no external contributions are permitted.
+For now no external contributions are allowed.
 
 
 

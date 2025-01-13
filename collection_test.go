@@ -1,13 +1,13 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
-	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -79,7 +79,6 @@ func TestArrayByPointer(t *testing.T) {
 
 	// initialization order
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&elementX{name: "a"},
 		&elementX{name: "b"},
 		&elementX{name: "c"},
@@ -118,7 +117,6 @@ func TestOrderedArrayByPointer(t *testing.T) {
 
 	// initialization order
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&orderedElementX{name: "c"},
 		&orderedElementX{name: "a"},
 		&orderedElementX{name: "b"},
@@ -159,7 +157,6 @@ func TestOrderedArrayByPointer(t *testing.T) {
 func TestMapByPointer(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&elementX{name: "a"},
 		&elementX{name: "b"},
 		&elementX{name: "c"},
@@ -196,7 +193,6 @@ func TestMapByPointer(t *testing.T) {
 func TestMapDuplicatesByPointer(t *testing.T) {
 
 	_, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&elementX{name: "a"},
 		&elementX{name: "a"},
 		&elementX{name: "b"},
@@ -291,7 +287,6 @@ func TestArrayByInterface(t *testing.T) {
 
 	// initialization order
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&elementImpl{name: "a"},
 		&elementImpl{name: "b"},
 		&elementImpl{name: "c"},
@@ -328,7 +323,6 @@ func TestArrayByInterface(t *testing.T) {
 func TestOrderedArrayByInterface(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&orderedElementImpl{name: "c"},
 		&orderedElementImpl{name: "a"},
 		&orderedElementImpl{name: "b"},
@@ -366,7 +360,6 @@ func TestMapByInterface(t *testing.T) {
 
 	// initialization order
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&elementImpl{name: "a"},
 		&elementImpl{name: "b"},
 		&elementImpl{name: "c"},
@@ -399,7 +392,6 @@ func TestMapDuplicatesByInterface(t *testing.T) {
 
 	// initialization order
 	_, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&elementImpl{name: "a"},
 		&elementImpl{name: "a"},
 		&elementImpl{name: "b"},

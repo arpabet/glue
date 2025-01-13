@@ -1,12 +1,12 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue
 
 import (
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"reflect"
@@ -105,6 +105,11 @@ type Context interface {
 	Extend(scan ...interface{}) (Context, error)
 
 	/**
+	Returns list of ctx context inside the current context only
+	 */
+	Children() []ChildContext
+
+	/**
 	Destroy all beans that implement interface DisposableBean.
 	*/
 	Close() error
@@ -144,7 +149,7 @@ type Context interface {
 		beans := ctx.Bean("app.UserService")
 		beans := ctx.Bean("userService")
 
-	Lookup parent context only for beans that were used in injection inside child context.
+	Lookup parent context only for beans that were used in injection inside ctx context.
 	If you need to lookup all beans, use the loop with Parent() call.
 	*/
 	Lookup(name string, level int) []Bean
@@ -184,8 +189,18 @@ type Context interface {
 }
 
 /**
-This interface used to provide pre-scanned instances in glue.New method
+This interface used to provide pre-scanned instances in glue.New method.
+When glue sees that instance implements Scanner interface, instead of adding
+instance itself to the context, glue it will call the method Beans() and
+add array of instances in to context.
+
+Used for conditional or modular instance discovery.
+
+The common usage is to place scanner in to scan.go file with enumerated list of beans.
+Scanner made as a interface to have a state and application can load beans differently
+depending on environment variables or other settings.
 */
+
 var ScannerClass = reflect.TypeOf((*Scanner)(nil)).Elem()
 
 type Scanner interface {
@@ -194,6 +209,36 @@ type Scanner interface {
 	Returns pre-scanned instances
 	*/
 	Beans() []interface{}
+}
+
+
+/**
+ChildContext is using to skip and delay initialization of the group of beans until application really needs it.
+It gives ability to declare hierarchy of context with lazy loading on demand.
+
+Use method glue.Child(role string, scan... interface{}) to initialize this special bean.
+ */
+
+var ChildContextClass = reflect.TypeOf((*ChildContext)(nil)).Elem()
+
+type ChildContext interface {
+
+	/**
+	Returns role of the ctx context, this name is not unique.
+	 */
+	Role() string
+
+	/**
+	Builds ctx context on the first request or returns existing one for all sequential calls.
+	*/
+	Object() (Context, error)
+
+	/**
+	Close ctx context if it was created. Safe to call twice or more.
+	Parent context is owning and responsible to close all ctx contexts created on demand.
+	*/
+	Close() error
+
 }
 
 /**
@@ -485,21 +530,3 @@ type Resource interface {
 	Open() (http.File, error)
 
 }
-
-/**
-Use this bean in context to operate verbose level during context creation.
-Best way is to use it first in context creation scan list.
-*/
-
-var VerboseClass = reflect.TypeOf((*Verbose)(nil))
-
-type Verbose struct {
-
-	/**
-	Use this logger to verbose
-	 */
-	Log  *log.Logger
-
-}
-
-

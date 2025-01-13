@@ -1,13 +1,13 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
-	"log"
 	"reflect"
 	"testing"
 )
@@ -73,7 +73,6 @@ func (t *serviceBean) Run() {
 func TestParent(t *testing.T) {
 
 	parent, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&coreBean{},
 	)
 	require.NoError(t, err)
@@ -106,7 +105,7 @@ type parentBean struct {
 }
 
 func (t *parentBean) Destroy() error {
-	// should never happened since we are not closing this context, only child one
+	// should never happened since we are not closing this context, only ctx one
 	require.True(t.testing, false)
 	return nil
 }
@@ -144,13 +143,13 @@ func TestParentCollection(t *testing.T) {
 	child, err := parent.Extend(
 		serviceBean,
 		&implComponent{value:"fromChild", order: 2},
-		&implElement{value: "child", order: 1},
+		&implElement{value: "ctx", order: 1},
 	)
 	require.NoError(t, err)
 	defer child.Close()
 
 	require.Equal(t, 2, len(serviceBean.Elements2))
-	require.Equal(t, "child", serviceBean.Elements2[0].value)
+	require.Equal(t, "ctx", serviceBean.Elements2[0].value)
 	require.Equal(t, "parent", serviceBean.Elements2[1].value)
 
 	require.Equal(t, 2, len(serviceBean.Components2))
@@ -179,7 +178,7 @@ func TestParentCollection(t *testing.T) {
 	require.Equal(t, "parent", list[0].Object().(*implElement).value)
 
 	/*
-	Test interface injected child context
+	Test interface injected ctx context
 	 */
 
 	list = child.Bean(ComponentClass, 0)
@@ -214,24 +213,24 @@ func TestParentCollection(t *testing.T) {
 	require.Equal(t, "fromChild", list[1].Object().(Component).Information())
 
 	/*
-		Test pointer injected child context
+		Test pointer injected ctx context
 	*/
 
 	list = child.Bean(implElementClass, 0)
 	require.Equal(t, 1, len(list))
-	require.Equal(t, "child", list[0].Object().(*implElement).value)
+	require.Equal(t, "ctx", list[0].Object().(*implElement).value)
 
 	list = child.Lookup("*glue_test.implElement", 0)
 	require.Equal(t, 1, len(list))
-	require.Equal(t, "child", list[0].Object().(*implElement).value)
+	require.Equal(t, "ctx", list[0].Object().(*implElement).value)
 
 	list = child.Bean(implElementClass, 1)
 	require.Equal(t, 1, len(list))
-	require.Equal(t, "child", list[0].Object().(*implElement).value)
+	require.Equal(t, "ctx", list[0].Object().(*implElement).value)
 
 	list = child.Lookup("*glue_test.implElement", 1)
 	require.Equal(t, 1, len(list))
-	require.Equal(t, "child", list[0].Object().(*implElement).value)
+	require.Equal(t, "ctx", list[0].Object().(*implElement).value)
 
 	list = child.Bean(implElementClass, 2)
 	require.Equal(t, 2, len(list))
@@ -245,8 +244,69 @@ func TestParentCollection(t *testing.T) {
 	list = child.Bean(implElementClass, -1)
 	require.Equal(t, 2, len(list))
 
-	require.Equal(t, "child", list[0].Object().(*implElement).value)
+	require.Equal(t, "ctx", list[0].Object().(*implElement).value)
 	require.Equal(t, "parent", list[1].Object().(*implElement).value)
 
 }
 
+func TestChildren(t *testing.T) {
+
+	coreBean := &coreBean{}
+	serviceBean := &serviceBean{testing: t}
+
+	root := []interface{} {
+		coreBean,
+		&implComponent{value:"fromParent", order: 1},
+		&implElement{value: "parent", order: 2},
+
+		glue.Child("child",
+			serviceBean,
+			&implComponent{value:"fromChild", order: 2},
+			&implElement{value: "ctx", order: 1},
+			),
+	}
+
+	parent, err := glue.New(root)
+	require.NoError(t, err)
+	defer parent.Close()
+
+	require.Equal(t, 1, len(coreBean.Components))
+	require.Equal(t, "fromParent", coreBean.Components[0].Information())
+
+	// ChildContext should be found
+	list := parent.Bean(glue.ChildContextClass, glue.DefaultLevel)
+	require.Equal(t, 1, len(list))
+
+	// child context not yet created
+	require.Equal(t, 0, len(serviceBean.Elements2))
+
+	require.Equal(t, 1, len(parent.Children()))
+	// create child context
+	child, err := parent.Children()[0].Object()
+	require.NoError(t, err)
+
+	// parent context test
+	require.Equal(t, 2, len(serviceBean.Elements2))
+	require.Equal(t, "ctx", serviceBean.Elements2[0].value)
+	require.Equal(t, "parent", serviceBean.Elements2[1].value)
+
+	require.Equal(t, 2, len(serviceBean.Components2))
+
+	require.Equal(t, "fromParent", serviceBean.Components2[0].Information())
+	require.Equal(t, "fromChild", serviceBean.Components2[1].Information())
+
+	// interface injection test
+	list = child.Bean(ComponentClass, 0)
+	require.Equal(t, 1, len(list))
+	require.Equal(t, "fromChild", list[0].Object().(Component).Information())
+
+	// pointer injection test
+	list = child.Bean(implElementClass, 0)
+	require.Equal(t, 1, len(list))
+	require.Equal(t, "ctx", list[0].Object().(*implElement).value)
+
+	// parent owning child context, but let's close it early
+	err = child.Close()
+	require.NoError(t, err)
+
+}

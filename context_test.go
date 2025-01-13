@@ -1,6 +1,7 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
@@ -8,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
+	"go.arpabet.com/glue"
 	"log"
 	"os"
 	"reflect"
@@ -206,7 +207,6 @@ func TestCreate(t *testing.T) {
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
-		glue.Verbose{ Log: logger },
 		logger,
 		&storageImpl{},
 		&configServiceImpl{},
@@ -266,7 +266,6 @@ func TestCreateArray(t *testing.T) {
 	b = append(b, logger, &storageImpl{}, &configServiceImpl{})
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: logger },
 		b,
 		&userServiceImpl{},
 		&appServiceImpl{},
@@ -298,7 +297,6 @@ func TestCreateScanner(t *testing.T) {
 	}
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: logger },
 		scanner,
 		&userServiceImpl{},
 		&appServiceImpl{},
@@ -326,7 +324,6 @@ func TestRequest(t *testing.T) {
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
-		glue.Verbose{ Log: logger },
 		logger,
 		&storageImpl{},
 		&configServiceImpl{},
@@ -352,7 +349,6 @@ func TestRequest(t *testing.T) {
 func TestMissingPointer(t *testing.T) {
 
 	_, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&storageImpl{},
 		&configServiceImpl{},
 		&userServiceImpl{},
@@ -370,7 +366,6 @@ func TestMissingInterface(t *testing.T) {
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	_, err := glue.New(
-		glue.Verbose{ Log: logger },
 		logger,
 		&storageImpl{},
 		&userServiceImpl{},
@@ -385,7 +380,6 @@ func TestMissingInterfaceBean(t *testing.T) {
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
-		glue.Verbose{ Log: logger },
 		logger,
 		&storageImpl{},
 		&configServiceImpl{},
@@ -414,7 +408,6 @@ func TestRequestMultithreading(t *testing.T) {
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	var ctx, err = glue.New(
-		glue.Verbose{ Log: logger },
 		logger,
 		&storageImpl{},
 		&configServiceImpl{},

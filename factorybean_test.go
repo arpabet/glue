@@ -1,13 +1,13 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue_test
 
 import (
+	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
-	"github.com/schwid/glue"
-	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -98,7 +98,6 @@ func (t *repeatedFactoryBeanExample) Singleton() bool {
 func TestSingleFactoryBean(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&someService{testing: t},
 		&factoryBeanExample{testing: t},
 	)
@@ -117,7 +116,6 @@ func TestRepeatedFactoryBean(t *testing.T) {
 
 	app := &applicationContext{}
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&someService{testing: t},
 		&factoryBeanExample{testing: t},
 		&repeatedFactoryBeanExample{testing: t},
@@ -134,7 +132,6 @@ func TestFactoryBean(t *testing.T) {
 
 	app := &applicationContext{}
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		app,
 		&factoryBeanExample{testing: t},
 		&someService{testing: t},
@@ -222,7 +219,6 @@ func (t *factoryBeanImpl) Singleton() bool {
 func TestFactoryInterfaceBean(t *testing.T) {
 
 	ctx, err := glue.New(
-		glue.Verbose{ Log: log.Default() },
 		&factoryBeanImpl{testing: t},
 		&someServiceImpl{testing: t},
 		&struct {

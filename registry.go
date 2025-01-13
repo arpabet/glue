@@ -1,6 +1,7 @@
-/**
-  Copyright (c) 2022 Zander Schwid & Co. LLC. All rights reserved.
-*/
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
 package glue
 
@@ -85,9 +86,18 @@ func (t *registry) findResource(source, name string) (Resource, bool) {
 func (t *registry) addBeanList(ifaceType reflect.Type, list []*bean) {
 	t.Lock()
 	defer t.Unlock()
-	for _, b := range list {
-		t.beansByType[ifaceType] = append(t.beansByType[ifaceType], b)
-		t.beansByName[b.name] = append(t.beansByName[b.name], b)
+	if len(list) == 0 {
+		// use placeholder for the interface type
+		// it would mark the type as known
+		_, ok := t.beansByType[ifaceType]
+		if !ok {
+			t.beansByType[ifaceType] = []*bean{}
+		}
+	} else {
+		for _, b := range list {
+			t.beansByType[ifaceType] = append(t.beansByType[ifaceType], b)
+			t.beansByName[b.name] = append(t.beansByName[b.name], b)
+		}
 	}
 }
 
