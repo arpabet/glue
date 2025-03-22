@@ -15,7 +15,14 @@ import (
 	"unsafe"
 )
 
-const DefaultLevel = 0
+const (
+	DefaultLevel                          = CurrentContextWithParentFallbackLevel
+	CurrentContextWithParentFallbackLevel = 0
+	CurrentContextLevel                   = 1
+	CurrentContextWithParentLevel         = 2
+	CurrentContextWithTwoParentsLevel     = 3
+	UnlimitedLevel                        = -1
+)
 
 type beanDef struct {
 	/**
@@ -50,7 +57,7 @@ type bean struct {
 
 	/**
 	Qualifier of the bean
-	 */
+	*/
 	qualifier string
 
 	/**
@@ -106,8 +113,8 @@ type bean struct {
 }
 
 type beanlist struct {
-	level  int
-	list   []*bean
+	level int
+	list  []*bean
 }
 
 func (t beanlist) String() string {
@@ -182,7 +189,8 @@ func (t *bean) Lifecycle() BeanLifecycle {
 	return t.lifecycle
 }
 
-/**
+/*
+*
 Check if bean definition can implement interface type
 */
 func (t *beanDef) implements(ifaceType reflect.Type) bool {
@@ -281,7 +289,8 @@ type factoryDependency struct {
 	injection func(instance *bean) error
 }
 
-/**
+/*
+*
 Investigate bean by using reflection
 */
 func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
@@ -353,13 +362,13 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 				return nil, errors.Errorf("empty property name in field '%s' with type '%v' on position %d in %v with 'value' tag", field.Name, field.Type, j, classPtr)
 			}
 			def := &propInjectionDef{
-				class:     class,
-				fieldNum:  j,
-				fieldName: field.Name,
-				fieldType: field.Type,
+				class:        class,
+				fieldNum:     j,
+				fieldName:    field.Name,
+				fieldType:    field.Type,
 				propertyName: propertyName,
 				defaultValue: defaultValue,
-				layout: layout,
+				layout:       layout,
 			}
 			properties = append(properties, def)
 			continue
@@ -442,12 +451,12 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 		order = orderedBean.BeanOrder()
 	}
 	return &bean{
-		name:     name,
+		name:      name,
 		qualifier: qualifier,
-		ordered:  ordered,
-		order:    order,
-		obj:      obj,
-		valuePtr: valuePtr,
+		ordered:   ordered,
+		order:     order,
+		obj:       obj,
+		valuePtr:  valuePtr,
 		beanDef: &beanDef{
 			classPtr:        classPtr,
 			anonymousFields: anonymousFields,
