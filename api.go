@@ -374,6 +374,10 @@ type PropertySource struct {
 	Map map[string]interface{}
 }
 
+var PropertyMapClass = reflect.TypeOf((*PropertyMap)(nil))
+
+type PropertyMap map[string]interface{}
+
 /*
 Property Resolver interface used to enhance the Properties interface with additional sources of properties.
 */

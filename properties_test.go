@@ -7,8 +7,8 @@ package glue_test
 
 import (
 	"bytes"
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"io/fs"
 	"io/ioutil"
 	"net/http"
@@ -17,6 +17,17 @@ import (
 	"testing"
 	"time"
 )
+
+var propertiesMap = map[string]interface{}{
+	"example.str":      "string\n",
+	"example.int":      123,
+	"example.bool":     true,
+	"example.float":    1.23,
+	"example.double":   1.23,
+	"example.duration": "300ms",
+	"example.time":     "2022-10-22",
+	"example.filemode": "-rwxrwxr-x",
+}
 
 var propertiesFile = `
 # comment
@@ -47,53 +58,51 @@ example:
 const expectedPropertiesNum = 8
 
 type beanWithProperties struct {
-
-	Str  string `value:"example.str"`
-	DefStr  string `value:"example.str.def,default=def"`
-	ArrStr []string  `value:"example.str.arr,default=a;b;c"`
+	Str    string   `value:"example.str"`
+	DefStr string   `value:"example.str.def,default=def"`
+	ArrStr []string `value:"example.str.arr,default=a;b;c"`
 	//StrFn func() (string, error) `value:"example.str"`
 
-	Int  int `value:"example.int"`
-	DefInt  int `value:"example.int.def,default=555"`
-	ArrInt  []int `value:"example.int.arr,default=1;2;3"`
+	Int    int   `value:"example.int"`
+	DefInt int   `value:"example.int.def,default=555"`
+	ArrInt []int `value:"example.int.arr,default=1;2;3"`
 	//IntFn   func() (int, error) `value:"example.int"`
 
-	Bool bool `value:"example.bool"`
-	DefBool  bool `value:"example.bool.def,default=true"`
-	ArrBool  []bool `value:"example.bool.arr,default=true;false;true"`
+	Bool    bool   `value:"example.bool"`
+	DefBool bool   `value:"example.bool.def,default=true"`
+	ArrBool []bool `value:"example.bool.arr,default=true;false;true"`
 	//BoolFn   func() (bool, error) `value:"example.int"`
 
-	Float32 float32 `value:"example.float"`
-	DefFloat32 float32 `value:"example.float.def,default=5.55"`
+	Float32    float32   `value:"example.float"`
+	DefFloat32 float32   `value:"example.float.def,default=5.55"`
 	ArrFloat32 []float32 `value:"example.float.arr,default=1.2;1.3"`
 	//Float32Fn   func() (float32, error) `value:"example.float"`
 
-	Float64 float64 `value:"example.double"`
-	DefFloat64 float64 `value:"example.double.def,default=5.55"`
+	Float64    float64   `value:"example.double"`
+	DefFloat64 float64   `value:"example.double.def,default=5.55"`
 	ArrFloat64 []float64 `value:"example.double.arr,default=1.2;1.3"`
 	//Float64Fn func() (float64, error) `value:"example.double"`
 
-	Duration time.Duration `value:"example.duration"`
-	DefDuration time.Duration `value:"example.duration.def,default=500ms"`
+	Duration    time.Duration   `value:"example.duration"`
+	DefDuration time.Duration   `value:"example.duration.def,default=500ms"`
 	ArrDuration []time.Duration `value:"example.duration.arr,default=100ms;200ms"`
 	//DurationFn func() (time.Duration, error) `value:"example.duration"`
 
-	Time time.Time  `value:"example.time,layout=2006-01-02"`
-	DefTime time.Time  `value:"example.time.def,layout=2006-01-02,default=2022-10-21"`
-	ArrTime []time.Time  `value:"example.time.arr,layout=2006-01-02,default=2022-10-21;2022-10-22"`
+	Time    time.Time   `value:"example.time,layout=2006-01-02"`
+	DefTime time.Time   `value:"example.time.def,layout=2006-01-02,default=2022-10-21"`
+	ArrTime []time.Time `value:"example.time.arr,layout=2006-01-02,default=2022-10-21;2022-10-22"`
 	//TimeFn func() (time.Time, error) `value:"example.time,layout=2006-01-02"`s
 
-	FileMode os.FileMode  `value:"example.filemode"`
-	DefFileMode os.FileMode  `value:"example.filemode.def,default=-rw-rw-r--"`
-	ArrFileMode []os.FileMode  `value:"example.filemode.arr,default=-rw-rw-r--;-rw-rw-rw-"`
+	FileMode    os.FileMode   `value:"example.filemode"`
+	DefFileMode os.FileMode   `value:"example.filemode.def,default=-rw-rw-r--"`
+	ArrFileMode []os.FileMode `value:"example.filemode.arr,default=-rw-rw-r--;-rw-rw-rw-"`
 	//FileModeFn func() (time.Time, error) `value:"example.filemode"`
 
-	Properties  glue.Properties `inject`
-
+	Properties glue.Properties `inject`
 }
 
 type oneFile struct {
-	name string
+	name    string
 	content string
 }
 
@@ -106,8 +115,8 @@ func (t oneFile) Open(name string) (http.File, error) {
 
 type assetFile struct {
 	*bytes.Reader
-	name            string
-	size            int
+	name string
+	size int
 }
 
 func (t assetFile) Close() error {
@@ -147,7 +156,7 @@ func (t assetFile) Sys() interface{} {
 }
 
 type onePropertyResolver struct {
-	key string
+	key   string
 	value string
 }
 
@@ -169,7 +178,7 @@ func TestPropertyResolver(t *testing.T) {
 	err := p.Parse(propertiesFile)
 	require.NoError(t, err)
 
-	p.Register(&onePropertyResolver{ key: "new.property", value: "new.value"})
+	p.Register(&onePropertyResolver{key: "new.property", value: "new.value"})
 	require.Equal(t, "new.value", p.GetString("new.property", ""))
 }
 
@@ -204,7 +213,7 @@ func TestProperties(t *testing.T) {
 
 	/**
 	Test defaults
-	 */
+	*/
 
 	require.Equal(t, "def", p.GetString("example.str.def", "def"))
 	require.Equal(t, 555, p.GetInt("example.int.def", 555))
@@ -216,6 +225,21 @@ func TestProperties(t *testing.T) {
 
 	//println(p.Dump())
 
+}
+
+func TestPlaceholderMapProperties(t *testing.T) {
+
+	b := new(beanWithProperties)
+
+	ctx, err := glue.New(
+		glue.PropertyMap(propertiesMap),
+		b,
+	)
+
+	require.NoError(t, err)
+	defer ctx.Close()
+
+	verifyPropertyBean(t, b)
 }
 
 func TestPlaceholderProperties(t *testing.T) {
@@ -231,11 +255,11 @@ func validatePropertiesFile(t *testing.T, fileName string, fileContent string) {
 
 	ctx, err := glue.New(
 		glue.ResourceSource{
-			Name: "resources",
-			AssetNames: []string{ fileName },
-			AssetFiles: oneFile{ name: fileName, content: fileContent },
+			Name:       "resources",
+			AssetNames: []string{fileName},
+			AssetFiles: oneFile{name: fileName, content: fileContent},
 		},
-		glue.PropertySource{ Path: "resources:" + fileName },
+		glue.PropertySource{Path: "resources:" + fileName},
 		b,
 	)
 
@@ -256,12 +280,12 @@ func validatePropertiesFile(t *testing.T, fileName string, fileContent string) {
 
 	/**
 	Should be the same object
-	 */
+	*/
 	require.Equal(t, ctx.Properties(), b.Properties)
 
 	/**
 	Runtime injection test
-	 */
+	*/
 	b2 := new(beanWithProperties)
 	err = ctx.Inject(b2)
 	require.NoError(t, err)
@@ -286,7 +310,7 @@ func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 	require.Equal(t, 1.23, b.Float64)
 	require.Equal(t, time.Duration(300000000), b.Duration)
 
-	tm22, err := time.Parse( "2006-01-02", "2022-10-22")
+	tm22, err := time.Parse("2006-01-02", "2022-10-22")
 	require.NoError(t, err)
 	require.Equal(t, tm22, b.Time)
 
@@ -302,7 +326,7 @@ func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 	require.Equal(t, 5.55, b.DefFloat64)
 	require.Equal(t, time.Duration(500000000), b.DefDuration)
 
-	tm21, err := time.Parse( "2006-01-02", "2022-10-21")
+	tm21, err := time.Parse("2006-01-02", "2022-10-21")
 	require.NoError(t, err)
 	require.Equal(t, tm21, b.DefTime)
 
@@ -319,7 +343,7 @@ func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 	require.Equal(t, []time.Duration{100000000, 200000000}, b.ArrDuration)
 	require.Equal(t, []time.Time{tm21, tm22}, b.ArrTime)
 
-	require.Equal(t, []os.FileMode { os.FileMode(0664), os.FileMode(0666) }, b.ArrFileMode)
+	require.Equal(t, []os.FileMode{os.FileMode(0664), os.FileMode(0666)}, b.ArrFileMode)
 
 }
 
@@ -360,10 +384,10 @@ func TestMergeProperties(t *testing.T) {
 func TestParseFileMode(t *testing.T) {
 
 	knownModes := map[string]os.FileMode{
-		"-rwxrwxr-x":     os.FileMode(0775),
-		"-rw-rw-r--":    os.FileMode(0664),
-		"-rw-rw-rw-":    os.FileMode(0666),
-		"-rwxrwx---":    os.FileMode(0770),
+		"-rwxrwxr-x": os.FileMode(0775),
+		"-rw-rw-r--": os.FileMode(0664),
+		"-rw-rw-rw-": os.FileMode(0666),
+		"-rwxrwx---": os.FileMode(0770),
 	}
 
 	for expected, mode := range knownModes {
@@ -377,4 +401,3 @@ func TestParseFileMode(t *testing.T) {
 	}
 
 }
-

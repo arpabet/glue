@@ -173,6 +173,13 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 				verbose.Printf("PropertySource %s %d\n", instance.Path, len(instance.Map))
 			}
 			propertySources = append(propertySources, instance)
+		case PropertyMap:
+			if verbose != nil {
+				verbose.Printf("PropertyMap %d\n", len(instance))
+			}
+			ps := &PropertySource{Map: instance}
+			propertySources = append(propertySources, ps)
+			obj = ps
 		case PropertyResolver:
 			if verbose != nil {
 				verbose.Printf("PropertyResolver Priority %d\n", instance.Priority())
