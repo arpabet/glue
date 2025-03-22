@@ -20,7 +20,7 @@ import (
 var DefaultCloseTimeout = time.Minute
 
 type context struct {
-	
+
 	/**
 	Parent context if exist
 	*/
@@ -28,7 +28,7 @@ type context struct {
 
 	/**
 	Recognized ctx context list
-	 */
+	*/
 	children []ChildContext
 
 	/**
@@ -49,7 +49,7 @@ type context struct {
 
 	/**
 	Placeholder properties of the context
-	 */
+	*/
 	properties Properties
 
 	/**
@@ -98,8 +98,8 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 		parent: parent,
 		core:   core,
 		registry: registry{
-			beansByName: make(map[string][]*bean),
-			beansByType: make(map[reflect.Type][]*bean),
+			beansByName:     make(map[string][]*bean),
+			beansByType:     make(map[reflect.Type][]*bean),
 			resourceSources: make(map[string]*resourceSource),
 		},
 		properties: NewProperties(),
@@ -118,7 +118,7 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 		},
 		lifecycle: BeanInitialized,
 	}
-	core[ctxBean.beanDef.classPtr] = []*bean {ctxBean}
+	core[ctxBean.beanDef.classPtr] = []*bean{ctxBean}
 
 	// add properties bean to registry
 	propertiesBean := &bean{
@@ -129,7 +129,7 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 		},
 		lifecycle: BeanInitialized,
 	}
-	core[propertiesBean.beanDef.classPtr] = []*bean {propertiesBean}
+	core[propertiesBean.beanDef.classPtr] = []*bean{propertiesBean}
 
 	// scan
 	err = forEach("", scan, func(pos string, obj interface{}) (err error) {
@@ -238,20 +238,20 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 
 			/**
 			Enumerate injection fields
-			 */
+			*/
 			if len(objBean.beanDef.fields) > 0 {
 				value := objBean.valuePtr.Elem()
 				for _, injectDef := range objBean.beanDef.fields {
 					if verbose != nil {
 						var attr []string
 						if injectDef.lazy {
-							attr = append(attr,  "lazy")
+							attr = append(attr, "lazy")
 						}
 						if injectDef.optional {
-							attr = append(attr,  "optional")
+							attr = append(attr, "optional")
 						}
 						if injectDef.qualifier != "" {
-							attr = append(attr,  "bean=" + injectDef.qualifier)
+							attr = append(attr, "bean="+injectDef.qualifier)
 						}
 						var attrs string
 						if len(attr) > 0 {
@@ -302,7 +302,7 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 					},
 					lifecycle: BeanAllocated,
 				}
-				f.instances = []*bean {elemBean}
+				f.instances = []*bean{elemBean}
 				// we can have singleton or multiple beans in context produced by this factory, let's allocate reference for injections even if those beans are still not exist
 				registerBean(core, elemClassPtr, elemBean)
 				secondaryList = append(secondaryList, elemBean)
@@ -314,8 +314,8 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 			registerBean(core, classPtr, objBean)
 
 			/**
-				Initialize property resolver beans at first
-			 */
+			Initialize property resolver beans at first
+			*/
 			if resolver {
 				primaryList = append(primaryList, objBean)
 			} else {
@@ -456,7 +456,7 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 
 	/**
 	Load properties from property sources
-	 */
+	*/
 	if len(propertySources) > 0 {
 		if err := ctx.loadProperties(propertySources); err != nil {
 			return nil, err
@@ -465,14 +465,14 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 
 	/**
 	Register property resolvers from context
-	 */
+	*/
 	for _, r := range propertyResolvers {
 		ctx.properties.Register(r)
 	}
 
 	/**
 	PostConstruct beans
-	 */
+	*/
 	if err := ctx.postConstruct(primaryList, secondaryList); err != nil {
 		ctx.closeWithTimeout(DefaultCloseTimeout)
 		return nil, err
@@ -489,11 +489,11 @@ func (t *context) closeWithTimeout(timeout time.Duration) {
 		close(ch)
 	}()
 	select {
-	case e := <- ch:
+	case e := <-ch:
 		if e != nil && verbose != nil {
 			verbose.Printf("Close context error, %v\n", e)
 		}
-	case <- time.After(timeout):
+	case <-time.After(timeout):
 		if verbose != nil {
 			verbose.Printf("Close context timeout error.\n")
 		}
@@ -588,6 +588,14 @@ func registerBean(registry map[reflect.Type][]*bean, classPtr reflect.Type, bean
 }
 
 func forEach(initialPos string, scan []interface{}, cb func(i string, obj interface{}) error) error {
+	// Use a map to track visited objects by their pointer address
+	visited := make(map[uintptr]bool)
+
+	// Call helper function with visited map
+	return forEachRecursive(initialPos, scan, cb, visited)
+}
+
+func forEachRecursive(initialPos string, scan []interface{}, cb func(i string, obj interface{}) error, visited map[uintptr]bool) error {
 	for j, item := range scan {
 		var pos string
 		if len(initialPos) > 0 {
@@ -595,16 +603,32 @@ func forEach(initialPos string, scan []interface{}, cb func(i string, obj interf
 		} else {
 			pos = strconv.Itoa(j)
 		}
+
 		if item == nil {
 			continue
 		}
+
+		// Check if this is a pointer type that we can track
+		if isPointer(item) {
+			// Get the memory address as uintptr
+			addr := reflect.ValueOf(item).Pointer()
+
+			// Skip if already visited
+			if visited[addr] {
+				continue
+			}
+
+			// Mark as visited
+			visited[addr] = true
+		}
+
 		switch obj := item.(type) {
 		case Scanner:
-			if err := forEach(pos, obj.Beans(), cb); err != nil {
+			if err := forEachRecursive(pos, obj.Beans(), cb, visited); err != nil {
 				return err
 			}
 		case []interface{}:
-			if err := forEach(pos, obj, cb); err != nil {
+			if err := forEachRecursive(pos, obj, cb, visited); err != nil {
 				return err
 			}
 		case interface{}:
@@ -616,6 +640,20 @@ func forEach(initialPos string, scan []interface{}, cb func(i string, obj interf
 		}
 	}
 	return nil
+}
+
+// Helper function to check if an object is a pointer or interface that can be tracked
+func isPointer(obj interface{}) bool {
+	if obj == nil {
+		return false
+	}
+
+	kind := reflect.ValueOf(obj).Kind()
+	return kind == reflect.Ptr ||
+		kind == reflect.Map ||
+		kind == reflect.Chan ||
+		kind == reflect.Func ||
+		kind == reflect.UnsafePointer
 }
 
 func (t *context) Core() []reflect.Type {
@@ -882,7 +920,7 @@ func (t *context) addDisposable(bean *bean) {
 	}
 }
 
-func (t *context) postConstruct(lists... []*bean) (err error) {
+func (t *context) postConstruct(lists ...[]*bean) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -973,7 +1011,7 @@ func (t *context) searchInterfaceCandidatesRecursive(ifaceType reflect.Type) []b
 	for ctx := t; ctx != nil; ctx = ctx.parent {
 		list := ctx.searchInterfaceCandidates(ifaceType)
 		if len(list) > 0 {
-			candidates = append(candidates, beanlist{ level: level, list: list })
+			candidates = append(candidates, beanlist{level: level, list: list})
 		}
 		level++
 	}
@@ -988,13 +1026,13 @@ func (t *context) searchAndCacheInterfaceCandidatesRecursive(ifaceType reflect.T
 		if list, ok := ctx.registry.findByType(ifaceType); !ok {
 			list = ctx.searchInterfaceCandidates(ifaceType)
 			if len(list) > 0 {
-				candidates = append(candidates, beanlist{ level: level, list: list })
+				candidates = append(candidates, beanlist{level: level, list: list})
 			}
 			// cache in registry
 			// even empty list, so we would not come here again
 			ctx.registry.addBeanList(ifaceType, list)
 		} else if len(list) > 0 {
-			candidates = append(candidates, beanlist{ level: level, list: list })
+			candidates = append(candidates, beanlist{level: level, list: list})
 		}
 		level++
 	}
@@ -1039,23 +1077,23 @@ func (t *context) String() string {
 }
 
 type childContext struct {
-	role  string
-	scan  []interface{}
+	role string
+	scan []interface{}
 
-	Parent  Context  `inject`
+	Parent Context `inject`
 
-	extendOnes  sync.Once
-	ctx         Context
-	err         error
+	extendOnes sync.Once
+	ctx        Context
+	err        error
 
-	closeOnes   sync.Once
+	closeOnes sync.Once
 }
 
 /**
 Defines ctx context inside parent context
- */
+*/
 
-func Child(role string, scan... interface{}) ChildContext {
+func Child(role string, scan ...interface{}) ChildContext {
 	return &childContext{role: role, scan: scan}
 }
 
@@ -1078,7 +1116,6 @@ func (t *childContext) Close() (err error) {
 	})
 	return
 }
-
 
 func (t *childContext) String() string {
 	return fmt.Sprintf("ChildContext [created=%v, role=%s, beans=%d]", t.ctx != nil, t.role, len(t.scan))

@@ -6,8 +6,8 @@
 package glue_test
 
 import (
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"reflect"
 	"strings"
 	"testing"
@@ -50,11 +50,18 @@ func TestMultipleBeanByPointer(t *testing.T) {
 		&firstBean{},
 		&secondBean{testing: t},
 	)
+	require.NoError(t, err)
+	defer ctx.Close()
 
-	require.Error(t, err)
-	require.Nil(t, ctx)
-	require.True(t, strings.Contains(err.Error(), "multiple candidates"))
-	println(err.Error())
+	// Now glue check if repeated instances added to the context
+	// if so, it would add only unique instance, therefore we would have
+	// context with first and second beans only and no error.
+
+	first := ctx.Bean(FirstBeanClass, glue.DefaultLevel)
+	require.Equal(t, 1, len(first))
+
+	second := ctx.Bean(SecondBeanClass, glue.DefaultLevel)
+	require.Equal(t, 1, len(second))
 
 }
 
