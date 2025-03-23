@@ -232,7 +232,7 @@ func TestPlaceholderMapProperties(t *testing.T) {
 	b := new(beanWithProperties)
 
 	ctx, err := glue.New(
-		glue.PropertyMap(propertiesMap),
+		glue.MapPropertySource(propertiesMap),
 		b,
 	)
 

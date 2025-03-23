@@ -364,7 +364,7 @@ var PropertySourceClass = reflect.TypeOf((*PropertySource)(nil))
 type PropertySource struct {
 
 	/*
-		Path to the properties file with prefix name of ResourceSource as "name:path".
+		Path to the properties file with prefix name of ResourceSource as "<resource_name>:path".
 	*/
 	Path string
 
@@ -374,9 +374,13 @@ type PropertySource struct {
 	Map map[string]interface{}
 }
 
-var PropertyMapClass = reflect.TypeOf((*PropertyMap)(nil))
+var ResourcePropertySourceClass = reflect.TypeOf((*ResourcePropertySource)(nil)).Elem()
 
-type PropertyMap map[string]interface{}
+type ResourcePropertySource string
+
+var MapPropertySourceClass = reflect.TypeOf((*MapPropertySource)(nil)).Elem()
+
+type MapPropertySource map[string]interface{}
 
 /*
 Property Resolver interface used to enhance the Properties interface with additional sources of properties.

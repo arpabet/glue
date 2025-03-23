@@ -150,10 +150,11 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 			if verbose != nil {
 				verbose.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
 			}
-			if err := ctx.registry.addResourceSource(&instance); err != nil {
+			ptr := &instance
+			if err := ctx.registry.addResourceSource(ptr); err != nil {
 				return err
 			}
-			obj = &instance
+			obj = ptr
 		case *ResourceSource:
 			if verbose != nil {
 				verbose.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
@@ -173,10 +174,19 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 				verbose.Printf("PropertySource %s %d\n", instance.Path, len(instance.Map))
 			}
 			propertySources = append(propertySources, instance)
-		case PropertyMap:
+		case ResourcePropertySource:
 			if verbose != nil {
-				verbose.Printf("PropertyMap %d\n", len(instance))
+				verbose.Printf("ResourcePropertySource %s\n", string(instance))
 			}
+			// does not do to the context, since it is not a pointer or interface, instead the &PropertySource object would be created
+			ps := &PropertySource{Path: string(instance)}
+			propertySources = append(propertySources, ps)
+			obj = ps
+		case MapPropertySource:
+			if verbose != nil {
+				verbose.Printf("MapPropertySource %d\n", len(instance))
+			}
+			// does not do to the context, since it is not a pointer or interface, instead the &PropertySource object would be created
 			ps := &PropertySource{Map: instance}
 			propertySources = append(propertySources, ps)
 			obj = ps
