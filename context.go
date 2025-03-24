@@ -177,9 +177,9 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 				verbose.Printf("PropertySource %s %d\n", instance.Path, len(instance.Map))
 			}
 			propertySources = append(propertySources, instance)
-		case ResourcePropertySource:
+		case FilePropertySource:
 			if verbose != nil {
-				verbose.Printf("ResourcePropertySource %s\n", string(instance))
+				verbose.Printf("FilePropertySource %s\n", string(instance))
 			}
 			// does not do to the context, since it is not a pointer or interface, instead the &PropertySource object would be created
 			ps := &PropertySource{Path: string(instance)}

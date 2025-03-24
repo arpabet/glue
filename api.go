@@ -374,9 +374,9 @@ type PropertySource struct {
 	Map map[string]interface{}
 }
 
-var ResourcePropertySourceClass = reflect.TypeOf((*ResourcePropertySource)(nil)).Elem()
+var FilePropertySourceClass = reflect.TypeOf((*FilePropertySource)(nil)).Elem()
 
-type ResourcePropertySource string
+type FilePropertySource string
 
 var MapPropertySourceClass = reflect.TypeOf((*MapPropertySource)(nil)).Elem()
 
