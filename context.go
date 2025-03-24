@@ -67,11 +67,19 @@ type context struct {
 }
 
 func New(scan ...interface{}) (Context, error) {
-	return createContext(nil, scan)
+	return createContext(nil, NewProperties(), scan)
+}
+
+func NewWithProperties(properties Properties, scan ...interface{}) (Context, error) {
+	return createContext(nil, properties, scan)
 }
 
 func (t *context) Extend(scan ...interface{}) (Context, error) {
-	return createContext(t, scan)
+
+	properties := NewProperties()
+	properties.Extend(t.properties)
+
+	return createContext(t, properties, scan)
 }
 
 func (t *context) Parent() (Context, bool) {
@@ -82,7 +90,7 @@ func (t *context) Parent() (Context, bool) {
 	}
 }
 
-func createContext(parent *context, scan []interface{}) (ctx *context, err error) {
+func createContext(parent *context, properties Properties, scan []interface{}) (ctx *context, err error) {
 
 	prev := runtime.GOMAXPROCS(1)
 	defer func() {
@@ -105,13 +113,9 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 			beansByType:     make(map[reflect.Type][]*bean),
 			resourceSources: make(map[string]*resourceSource),
 		},
-		properties: NewProperties(),
+		properties: properties,
 	}
-
-	if parent != nil {
-		ctx.properties.Extend(parent.properties)
-	}
-
+	
 	// add context bean to registry
 	ctxBean := &bean{
 		obj:      ctx,

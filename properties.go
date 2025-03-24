@@ -21,26 +21,28 @@ import (
 
 // Properties contains the key/value pairs from the properties input.
 type properties struct {
-
 	sync.RWMutex
 
 	priority int
 
-	store map[string]string
+	store    map[string]string
 	comments map[string][]string
 
 	resolvers []PropertyResolver
 
 	// property conversion error handler
 	errorHandler func(string, error)
-
 }
 
 func NewProperties() Properties {
-	t := &properties {
-		priority: defaultPropertyResolverPriority,
-		store: make(map[string]string),
-		comments: make(map[string][]string),
+	return NewPropertiesWithPriority(defaultPropertyResolverPriority)
+}
+
+func NewPropertiesWithPriority(priority int) Properties {
+	t := &properties{
+		priority:  priority,
+		store:     make(map[string]string),
+		comments:  make(map[string][]string),
 		resolvers: make([]PropertyResolver, 0, 10),
 	}
 	t.Register(t)
@@ -50,7 +52,7 @@ func NewProperties() Properties {
 func (t *properties) String() string {
 	t.RLock()
 	defer t.RUnlock()
-	return fmt.Sprintf("Properties{priority=%d,store=%d,comments=%d,resolvers=%d,errorHandler=%v}", t.priority, len(t.store), len(t.comments),len(t.resolvers),t.errorHandler != nil)
+	return fmt.Sprintf("Properties{priority=%d,store=%d,comments=%d,resolvers=%d,errorHandler=%v}", t.priority, len(t.store), len(t.comments), len(t.resolvers), t.errorHandler != nil)
 }
 
 func (t *properties) Register(resolver PropertyResolver) {
@@ -259,7 +261,7 @@ func (t *properties) nextPropertyResolver(i int) (PropertyResolver, bool) {
 }
 
 func (t *properties) Get(key string) (value string, ok bool) {
-	for i := 0;; i++ {
+	for i := 0; ; i++ {
 		r, ok := t.nextPropertyResolver(i)
 		if !ok {
 			break
@@ -462,7 +464,8 @@ func parseBool(str string) (bool, error) {
 	return false, errors.Errorf("invalid syntax '%s'", str)
 }
 
-/**
+/*
+*
 Parses only os.Unix file mode with 0777 mask
 */
 func parseFileMode(s string) os.FileMode {
@@ -481,7 +484,7 @@ func parseFileMode(s string) os.FileMode {
 
 	for i, c := range rwx {
 		if byte(c) == s[i] {
-			m |= 1<<uint(9-1-i)
+			m |= 1 << uint(9-1-i)
 		}
 	}
 
