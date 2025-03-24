@@ -115,7 +115,7 @@ func createContext(parent *context, properties Properties, scan []interface{}) (
 		},
 		properties: properties,
 	}
-	
+
 	// add context bean to registry
 	ctxBean := &bean{
 		obj:      ctx,
@@ -146,7 +146,7 @@ func createContext(parent *context, properties Properties, scan []interface{}) (
 		switch instance := obj.(type) {
 		case ChildContext:
 			if verbose != nil {
-				verbose.Printf("ChildContext %s\n", instance.Role())
+				verbose.Printf("ChildContext %s\n", instance.ChildName())
 			}
 			ctx.children = append(ctx.children, instance)
 			// register interest by making a placeholder
@@ -679,7 +679,7 @@ func forEachRecursive(initialPos string, scan []interface{}, cb func(i string, o
 
 		switch obj := item.(type) {
 		case Scanner:
-			if err := forEachRecursive(pos, obj.Beans(), cb, visited); err != nil {
+			if err := forEachRecursive(pos, obj.ScannerBeans(), cb, visited); err != nil {
 				return err
 			}
 		case []interface{}:
@@ -1132,7 +1132,7 @@ func (t *context) String() string {
 }
 
 type childContext struct {
-	role string
+	name string
 	scan []interface{}
 
 	Parent Context `inject`
@@ -1148,12 +1148,12 @@ type childContext struct {
 Defines ctx context inside parent context
 */
 
-func Child(role string, scan ...interface{}) ChildContext {
-	return &childContext{role: role, scan: scan}
+func Child(name string, scan ...interface{}) ChildContext {
+	return &childContext{name: name, scan: scan}
 }
 
-func (t *childContext) Role() string {
-	return t.role
+func (t *childContext) ChildName() string {
+	return t.name
 }
 
 func (t *childContext) Object() (ctx Context, err error) {
@@ -1173,7 +1173,7 @@ func (t *childContext) Close() (err error) {
 }
 
 func (t *childContext) String() string {
-	return fmt.Sprintf("ChildContext [created=%v, role=%s, beans=%d]", t.ctx != nil, t.role, len(t.scan))
+	return fmt.Sprintf("ChildContext [created=%v, name=%s, beans=%d]", t.ctx != nil, t.name, len(t.scan))
 }
 
 func (t *context) Children() []ChildContext {

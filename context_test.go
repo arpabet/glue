@@ -284,7 +284,7 @@ type scannerImpl struct {
 }
 
 // implements glue.Scanner
-func (t scannerImpl) Beans() []interface{} {
+func (t scannerImpl) ScannerBeans() []interface{} {
 	return t.arr
 }
 

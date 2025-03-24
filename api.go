@@ -191,7 +191,7 @@ type Context interface {
 /*
 This interface used to provide pre-scanned instances in glue.New method.
 When glue sees that instance implements Scanner interface, instead of adding
-instance itself to the context, glue it will call the method Beans() and
+instance itself to the context, glue it will call the method ScannerBeans() and
 add array of instances in to context.
 
 Used for conditional or modular instance discovery.
@@ -208,14 +208,14 @@ type Scanner interface {
 	/*
 		Returns pre-scanned instances
 	*/
-	Beans() []interface{}
+	ScannerBeans() []interface{}
 }
 
 /*
 ChildContext is using to skip and delay initialization of the group of beans until application really needs it.
 It gives ability to declare hierarchy of context with lazy loading on demand.
 
-Use method glue.Child(role string, scan... interface{}) to initialize this special bean.
+Use method glue.Child(name string, scan... interface{}) to initialize this special bean.
 */
 
 var ChildContextClass = reflect.TypeOf((*ChildContext)(nil)).Elem()
@@ -223,9 +223,9 @@ var ChildContextClass = reflect.TypeOf((*ChildContext)(nil)).Elem()
 type ChildContext interface {
 
 	/*
-		Returns role of the ctx context, this name is not unique.
+		Returns the child context name, this name is not unique.
 	*/
-	Role() string
+	ChildName() string
 
 	/*
 		Builds ctx context on the first request or returns existing one for all sequential calls.
