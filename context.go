@@ -6,9 +6,12 @@
 package glue
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
+	"io"
+	"os"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -517,38 +520,73 @@ func (t *context) closeWithTimeout(timeout time.Duration) {
 	}
 }
 
+func (t *context) loadPropertiesFromFile(filePath string, file io.Reader) error {
+
+	if strings.HasSuffix(filePath, ".yaml") || strings.HasSuffix(filePath, ".yml") {
+
+		holder := make(map[string]interface{})
+		if err := yaml.NewDecoder(file).Decode(holder); err != nil {
+			return errors.Errorf("failed to load properties form yaml file '%s', %v", filePath, err)
+		}
+		t.properties.LoadMap(holder)
+		return nil
+
+	} else if strings.HasSuffix(filePath, ".json") {
+
+		data, err := io.ReadAll(file)
+		if err != nil {
+			return errors.Errorf("failed to read json file '%s', %v", filePath, err)
+		}
+		holder := make(map[string]interface{})
+		if err := json.Unmarshal(data, &holder); err != nil {
+			return errors.Errorf("failed to parse json file '%s', %v", filePath, err)
+		}
+		t.properties.LoadMap(holder)
+		return nil
+
+	} else if strings.HasSuffix(filePath, ".properties") {
+		if err := t.properties.Load(file); err != nil {
+			return errors.Errorf("failed to load properties form properties file '%s', %v", filePath, err)
+		}
+		return nil
+	} else {
+		return errors.Errorf("unsupported properties file '%s'", filePath)
+	}
+}
+
 func (t *context) loadProperties(propertySources []*PropertySource) error {
 
 	for _, source := range propertySources {
 
 		if source.Path != "" {
 
-			if resource, ok := t.Resource(source.Path); ok {
+			if strings.HasPrefix(source.Path, "file:") {
+
+				filePath := source.Path[len("file:"):]
+				file, err := os.Open(filePath)
+				if err != nil {
+					return errors.Errorf("i/o error with placeholder properties file '%s', %v", filePath, err)
+				}
+				err = t.loadPropertiesFromFile(filePath, file)
+				file.Close()
+				if err != nil {
+					return errors.Errorf("load error of placeholder properties file '%s', %v", filePath, err)
+				}
+
+			} else if resource, ok := t.Resource(source.Path); ok {
 
 				file, err := resource.Open()
 				if err != nil {
 					return errors.Errorf("i/o error with placeholder properties resource '%s', %v", source, err)
 				}
-
-				if isYamlFile(source.Path) {
-
-					holder := make(map[string]interface{})
-					err = yaml.NewDecoder(file).Decode(holder)
-					if err == nil {
-						t.properties.LoadMap(holder)
-					}
-
-				} else {
-					err = t.properties.Load(file)
-				}
-
+				err = t.loadPropertiesFromFile(source.Path, file)
 				file.Close()
 				if err != nil {
-					return errors.Errorf("load error of placeholder properties resource '%s', %v", source, err)
+					return errors.Errorf("load error of placeholder properties resource '%s', %v", source.Path, err)
 				}
 
 			} else {
-				return errors.Errorf("placeholder properties resource '%s' is not found", source)
+				return errors.Errorf("placeholder properties resource '%s' was not found", source.Path)
 			}
 		}
 
@@ -559,10 +597,6 @@ func (t *context) loadProperties(propertySources []*PropertySource) error {
 	}
 
 	return nil
-}
-
-func isYamlFile(fileName string) bool {
-	return strings.HasSuffix(fileName, ".yaml") || strings.HasSuffix(fileName, ".yml")
 }
 
 func (t *context) findObjectRecursive(requiredType reflect.Type) []beanlist {
