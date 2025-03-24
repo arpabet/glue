@@ -259,7 +259,7 @@ func validatePropertiesFile(t *testing.T, fileName string, fileContent string) {
 			AssetNames: []string{fileName},
 			AssetFiles: oneFile{name: fileName, content: fileContent},
 		},
-		glue.PropertySource{Path: "resources:" + fileName},
+		glue.PropertySource{File: "resources:" + fileName},
 		b,
 	)
 

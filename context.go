@@ -167,14 +167,14 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 			}
 		case PropertySource:
 			if verbose != nil {
-				verbose.Printf("PropertySource %s %d\n", instance.Path, len(instance.Map))
+				verbose.Printf("PropertySource %s %d\n", instance.File, len(instance.Map))
 			}
 			ptr := &instance
 			propertySources = append(propertySources, ptr)
 			obj = ptr
 		case *PropertySource:
 			if verbose != nil {
-				verbose.Printf("PropertySource %s %d\n", instance.Path, len(instance.Map))
+				verbose.Printf("PropertySource %s %d\n", instance.File, len(instance.Map))
 			}
 			propertySources = append(propertySources, instance)
 		case FilePropertySource:
@@ -182,7 +182,7 @@ func createContext(parent *context, scan []interface{}) (ctx *context, err error
 				verbose.Printf("FilePropertySource %s\n", string(instance))
 			}
 			// does not do to the context, since it is not a pointer or interface, instead the &PropertySource object would be created
-			ps := &PropertySource{Path: string(instance)}
+			ps := &PropertySource{File: string(instance)}
 			propertySources = append(propertySources, ps)
 			obj = ps
 		case MapPropertySource:
@@ -558,11 +558,11 @@ func (t *context) loadProperties(propertySources []*PropertySource) error {
 
 	for _, source := range propertySources {
 
-		if source.Path != "" {
+		if source.File != "" {
 
-			if strings.HasPrefix(source.Path, "file:") {
+			if strings.HasPrefix(source.File, "file:") {
 
-				filePath := source.Path[len("file:"):]
+				filePath := source.File[len("file:"):]
 				file, err := os.Open(filePath)
 				if err != nil {
 					return errors.Errorf("i/o error with placeholder properties file '%s', %v", filePath, err)
@@ -573,20 +573,20 @@ func (t *context) loadProperties(propertySources []*PropertySource) error {
 					return errors.Errorf("load error of placeholder properties file '%s', %v", filePath, err)
 				}
 
-			} else if resource, ok := t.Resource(source.Path); ok {
+			} else if resource, ok := t.Resource(source.File); ok {
 
 				file, err := resource.Open()
 				if err != nil {
 					return errors.Errorf("i/o error with placeholder properties resource '%s', %v", source, err)
 				}
-				err = t.loadPropertiesFromFile(source.Path, file)
+				err = t.loadPropertiesFromFile(source.File, file)
 				file.Close()
 				if err != nil {
-					return errors.Errorf("load error of placeholder properties resource '%s', %v", source.Path, err)
+					return errors.Errorf("load error of placeholder properties resource '%s', %v", source.File, err)
 				}
 
 			} else {
-				return errors.Errorf("placeholder properties resource '%s' was not found", source.Path)
+				return errors.Errorf("placeholder properties resource '%s' was not found", source.File)
 			}
 		}
 

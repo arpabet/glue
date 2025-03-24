@@ -172,7 +172,7 @@ type Context interface {
 
 	/*
 		Returns resource and true if found
-		Path should come with ResourceSource name prefix.
+		File should come with ResourceSource name prefix.
 		Uses default level of lookup for the resource.
 	*/
 	Resource(path string) (Resource, bool)
@@ -364,9 +364,9 @@ var PropertySourceClass = reflect.TypeOf((*PropertySource)(nil))
 type PropertySource struct {
 
 	/*
-		Path to the properties file with prefix name of ResourceSource as "<resource_name>:path".
+		File to the properties file with prefix name of ResourceSource as "<resource_name>:path" or "file:path" in os.FileSystem.
 	*/
-	Path string
+	File string
 
 	/*
 		Map of properties
