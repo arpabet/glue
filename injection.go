@@ -20,123 +20,122 @@ import (
 )
 
 var (
-
-   durationClass = reflect.TypeOf(time.Millisecond)
-   timeClass = reflect.TypeOf(time.Time{})
-   osFileModeClass = reflect.TypeOf(os.FileMode(0777))
-   fsFileModeClass = reflect.TypeOf(fs.FileMode(0777))
+	durationClass   = reflect.TypeOf(time.Millisecond)
+	timeClass       = reflect.TypeOf(time.Time{})
+	osFileModeClass = reflect.TypeOf(os.FileMode(0777))
+	fsFileModeClass = reflect.TypeOf(fs.FileMode(0777))
 )
 
 type injectionDef struct {
 
-	/**
-	Class of that struct
+	/*
+		Class of that struct
 	*/
 	class reflect.Type
-	/**
-	Field number of that struct
+	/*
+		Field number of that struct
 	*/
 	fieldNum int
-	/**
-	Field name where injection is going to be happen
+	/*
+		Field name where injection is going to be happen
 	*/
 	fieldName string
-	/**
-	Type of the field that is going to be injected
+	/*
+		Type of the field that is going to be injected
 	*/
 	fieldType reflect.Type
-	/**
-	Field is Slice of beans
+	/*
+		Field is Slice of beans
 	*/
 	slice bool
-	/**
-	Field is Map of beans
+	/*
+		Field is Map of beans
 	*/
 	table bool
-	/**
-	Lazy injection represented by function
+	/*
+		Lazy injection represented by function
 	*/
 	lazy bool
-	/**
-	Optional injection
+	/*
+		Optional injection
 	*/
 	optional bool
 	/*
-	Injection expects the specific bean to be injected
+		Injection expects the specific bean to be injected
 	*/
 	qualifier string
-	/**
-	Level of how deep we need to search beans for injection
+	/*
+		Level of how deep we need to search beans for injection
 
-	level 0: look in the current context, if not found then look in the parent context and so on (default)
-	level 1: look only in the current context
-	level 2: look in the current context in union with the parent context
-	level 3: look in union of current, parent, parent of parent contexts
-	and so on.
-	level -1: look in union of all contexts.
-	 */
+		level 0: look in the current context, if not found then look in the parent context and so on (default)
+		level 1: look only in the current context
+		level 2: look in the current context in union with the parent context
+		level 3: look in union of current, parent, parent of parent contexts
+		and so on.
+		level -1: look in union of all contexts.
+	*/
 	level int
 }
 
 type injection struct {
 
 	/*
-	Bean where injection is going to be happen
+		Bean where injection is going to be happen
 	*/
 	bean *bean
 
-	/**
-	Reflection value of the bean where injection is going to be happen
+	/*
+		Reflection value of the bean where injection is going to be happen
 	*/
 	value reflect.Value
 
-	/**
-	Injection information
+	/*
+		Injection information
 	*/
 	injectionDef *injectionDef
 }
 
 type propInjectionDef struct {
 
-	/**
-	Class of that struct
+	/*
+		Class of that struct
 	*/
 	class reflect.Type
 
-	/**
-	Field number of that struct
+	/*
+		Field number of that struct
 	*/
 	fieldNum int
 
-	/**
-	Field name where injection is going to be happen
+	/*
+		Field name where injection is going to be happen
 	*/
 	fieldName string
 
-	/**
-	Type of the field that is going to be injected
+	/*
+		Type of the field that is going to be injected
 	*/
 	fieldType reflect.Type
 
-	/**
-	Property name of injecting placeholder property
-	 */
+	/*
+		Property name of injecting placeholder property
+	*/
 	propertyName string
 
-	/**
-	Default value of the property to inject
+	/*
+		Default value of the property to inject
 	*/
 	defaultValue string
 
-	/**
-	Layout for date-time property
-	 */
-	layout  string
+	/*
+		Layout for date-time property
+	*/
+	layout string
 }
 
 /*
-	Prepare beans for the specific level of injection
- */
+Prepare beans for the specific level of injection
+*/
 func levelBeans(deep []beanlist, level int) []*bean {
 
 	switch level {
@@ -168,9 +167,10 @@ func levelBeans(deep []beanlist, level int) []*bean {
 
 }
 
-/**
-	Order beans, all or partially
- */
+/*
+*
+Order beans, all or partially
+*/
 func orderBeans(candidates []*bean) []*bean {
 	var ordered []*bean
 	for _, candidate := range candidates {
@@ -198,7 +198,8 @@ func orderBeans(candidates []*bean) []*bean {
 	}
 }
 
-/**
+/*
+*
 Inject value in to the field by using reflection
 */
 func (t *injection) inject(deep []beanlist) error {
@@ -248,7 +249,7 @@ func (t *injection) inject(deep []beanlist) error {
 				&factoryDependency{
 					factory: instance.beenFactory,
 					injection: func(service *bean) error {
-						field.Set(reflect.Append(field, instance.valuePtr))
+						field.Set(reflect.Append(field, service.valuePtr))
 						return nil
 					},
 				})
@@ -328,7 +329,7 @@ func (t *injection) inject(deep []beanlist) error {
 	return nil
 }
 
-//atomic.StoreUintptr((*uintptr)(unsafe.Pointer(field.Addr().Pointer())), impl.valuePtr.Pointer())
+// atomic.StoreUintptr((*uintptr)(unsafe.Pointer(field.Addr().Pointer())), impl.valuePtr.Pointer())
 func atomicSet(field reflect.Value, instance reflect.Value) {
 	atomic.StoreUintptr((*uintptr)(unsafe.Pointer(field.Addr().Pointer())), instance.Pointer())
 }
@@ -428,10 +429,9 @@ func (t *injectionDef) filterBeans(list []*bean) []*bean {
 	}
 }
 
-/**
+/*
 User friendly information about class and field
 */
-
 func (t *injection) String() string {
 	return t.injectionDef.String()
 }

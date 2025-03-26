@@ -863,7 +863,9 @@ func (t *context) constructBean(bean *bean, stack []*bean) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.Errorf("construct bean '%s' with type '%v' recovered with error %v", bean.name, bean.beanDef.classPtr, r)
+			stack := make([]byte, 4096)
+			stack = stack[:runtime.Stack(stack, false)]
+			err = errors.Errorf("construct bean '%s' with type '%v' recovered with error %v, stacktrace: %s", bean.name, bean.beanDef.classPtr, r, stack)
 		}
 	}()
 
