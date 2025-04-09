@@ -6,8 +6,8 @@
 package glue_test
 
 import (
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"reflect"
 	"testing"
 )
@@ -60,7 +60,7 @@ func TestOptionalBeanByInterface(t *testing.T) {
 	ctx, err := glue.New(
 		&beanBServiceImpl{testing: t},
 		&struct {
-			BeanBService BeanBService `inject`
+			BeanBService BeanBService `inject:""`
 		}{},
 	)
 	require.NoError(t, err)

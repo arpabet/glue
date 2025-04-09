@@ -84,7 +84,7 @@ type AppService interface {
 }
 
 type storageImpl struct {
-	Logger   *log.Logger `inject`
+	Logger   *log.Logger `inject:""`
 	internal sync.Map
 }
 
@@ -107,7 +107,7 @@ func (t *storageImpl) Store(key, value string) {
 }
 
 type configServiceImpl struct {
-	Storage Storage `inject`
+	Storage Storage `inject:""`
 }
 
 func (t *configServiceImpl) BeanName() string {
@@ -123,8 +123,8 @@ func (t *configServiceImpl) SetConfig(key, value string) {
 }
 
 type userServiceImpl struct {
-	Storage       Storage       `inject`
-	ConfigService ConfigService `inject`
+	Storage       Storage       `inject:""`
+	ConfigService ConfigService `inject:""`
 }
 
 func (t *userServiceImpl) GetUser(user string) string {
@@ -154,7 +154,7 @@ func (t *userServiceImpl) PostConstruct() error {
 }
 
 type appServiceImpl struct {
-	Context glue.Context `inject`
+	Context glue.Context `inject:""`
 }
 
 func (t *appServiceImpl) GetContext() glue.Context {
@@ -169,7 +169,7 @@ func TestCreateEmptyObject(t *testing.T) {
 		  needed to define usage of interfaces
 		*/
 		&struct {
-			Storage Storage `inject`
+			Storage Storage `inject:""`
 		}{},
 	)
 
@@ -191,7 +191,7 @@ func TestCreateDoubleObjects(t *testing.T) {
 		  needed to define usage of interfaces
 		*/
 		&struct {
-			Storage Storage `inject`
+			Storage Storage `inject:""`
 		}{},
 	)
 
@@ -216,8 +216,8 @@ func TestCreate(t *testing.T) {
 		  needed to define usage of UserService in context in order to register bean name with this interface name
 		*/
 		&struct {
-			UserService UserService `inject`
-			AppService  AppService  `inject`
+			UserService UserService `inject:""`
+			AppService  AppService  `inject:""`
 		}{},
 	)
 
@@ -312,7 +312,7 @@ func TestCreateScanner(t *testing.T) {
 
 type requestScope struct {
 	requestParams string      // scope `runtime`
-	UserService   UserService `inject` // with `inject` tag it guarantees non-null instance
+	UserService   UserService `inject:""` // with `inject` tag it guarantees non-null instance
 }
 
 func (t *requestScope) routeAddUser(user string) {
@@ -329,7 +329,7 @@ func TestRequest(t *testing.T) {
 		&configServiceImpl{},
 		&userServiceImpl{},
 		&struct {
-			UserService UserService `inject`
+			UserService UserService `inject:""`
 		}{}, // could be used by runtime injects
 	)
 	require.NoError(t, err)
@@ -353,7 +353,7 @@ func TestMissingPointer(t *testing.T) {
 		&configServiceImpl{},
 		&userServiceImpl{},
 		&struct {
-			UserService UserService `inject`
+			UserService UserService `inject:""`
 		}{}, // could be used by runtime injects
 	)
 	require.NotNil(t, err)
@@ -413,7 +413,7 @@ func TestRequestMultithreading(t *testing.T) {
 		&configServiceImpl{},
 		&userServiceImpl{},
 		&struct {
-			UserService UserService `inject`
+			UserService UserService `inject:""`
 		}{}, // could be used by runtime injects
 	)
 	require.NoError(t, err)

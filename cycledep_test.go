@@ -6,8 +6,8 @@
 package glue_test
 
 import (
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"testing"
 )
 
@@ -16,11 +16,11 @@ Cycle dependency test of plain beans
 */
 
 type aPlainBean struct {
-	BBean *bPlainBean `inject`
+	BBean *bPlainBean `inject:""`
 }
 
 type bPlainBean struct {
-	CBean *cPlainBean `inject`
+	CBean *cPlainBean `inject:""`
 }
 
 type cPlainBean struct {
@@ -40,7 +40,7 @@ func TestPlainBeanCycle(t *testing.T) {
 }
 
 type selfDepBean struct {
-	Self *selfDepBean `inject`
+	Self *selfDepBean `inject:""`
 }
 
 func TestSelfDepCycle(t *testing.T) {

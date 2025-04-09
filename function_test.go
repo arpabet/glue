@@ -6,16 +6,16 @@
 package glue_test
 
 import (
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"reflect"
 	"testing"
 )
 
 type functionHolder struct {
-	Int         func() int               `inject`
-	StringArray func() []string          `inject`
-	SomeMap     func() map[string]string `inject`
+	Int         func() int               `inject:""`
+	StringArray func() []string          `inject:""`
+	SomeMap     func() map[string]string `inject:""`
 }
 
 func TestPrimitiveFunctions(t *testing.T) {
@@ -53,8 +53,8 @@ type ServerBeans func() []interface{}
 var ServerBeansClass = reflect.TypeOf((ServerBeans)(nil))
 
 type funcServiceImpl struct {
-	ClientBeans ClientBeans `inject`
-	ServerBeans ServerBeans `inject`
+	ClientBeans ClientBeans `inject:""`
+	ServerBeans ServerBeans `inject:""`
 }
 
 func TestFunctions(t *testing.T) {

@@ -6,8 +6,8 @@
 package glue_test
 
 import (
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"reflect"
 	"testing"
 )
@@ -62,7 +62,7 @@ func (t *unoServiceImpl) Uno() {
 }
 
 type dosServiceImpl struct {
-	UnoService  UnoService `inject`
+	UnoService  UnoService `inject:""`
 	testing     *testing.T
 	initialized bool
 }
@@ -98,8 +98,8 @@ func TestLazyBeanInterface(t *testing.T) {
 		newDosService(t),
 
 		&struct {
-			UnoService UnoService `inject`
-			DosService DosService `inject`
+			UnoService UnoService `inject:""`
+			DosService DosService `inject:""`
 		}{},
 	)
 
@@ -149,7 +149,7 @@ var UnServiceClass = reflect.TypeOf((*unService)(nil))
 
 type unService struct {
 	glue.InitializingBean
-	ZeroService *zeroService `inject`
+	ZeroService *zeroService `inject:""`
 	testing     *testing.T
 	Initialized bool
 }

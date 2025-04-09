@@ -111,7 +111,7 @@ func (t *firstServiceImpl) First() {
 }
 
 type secondServiceImpl struct {
-	FirstService FirstService `inject`
+	FirstService FirstService `inject:""`
 	testing      *testing.T
 }
 
@@ -126,8 +126,8 @@ func TestBeanByInterface(t *testing.T) {
 		&secondServiceImpl{testing: t},
 
 		&struct {
-			FirstService  FirstService  `inject`
-			SecondService SecondService `inject`
+			FirstService  FirstService  `inject:""`
+			SecondService SecondService `inject:""`
 		}{},
 	)
 

@@ -6,13 +6,14 @@
 package glue_test
 
 import (
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"reflect"
 	"testing"
 )
 
 var ComponentClass = reflect.TypeOf((*Component)(nil)).Elem()
+
 type Component interface {
 	glue.OrderedBean
 	Information() string
@@ -43,9 +44,9 @@ func (t *implElement) BeanOrder() int {
 
 var coreBeanClass = reflect.TypeOf((*coreBean)(nil)) // *serviceBean
 type coreBean struct {
-	count int
-	Components    []Component   `inject:"optional"`
-	Elements      []*implElement   `inject:"optional"`
+	count      int
+	Components []Component    `inject:"optional"`
+	Elements   []*implElement `inject:"optional"`
 }
 
 func (t *coreBean) Inc() int {
@@ -55,12 +56,12 @@ func (t *coreBean) Inc() int {
 
 var serviceBeanClass = reflect.TypeOf((*serviceBean)(nil)) // *serviceBean
 type serviceBean struct {
-	Core    *coreBean `inject`
-	Components    []Component   `inject:"optional,level=1"`   // default level is 1, only current context
-	Elements      []*implElement   `inject:"optional,level=1"`
-	Components2   []Component   `inject:"optional,level=2"` // level 2 is current context plus parent context
-	Elements2     []*implElement   `inject:"optional,level=2"`
-	testing *testing.T
+	Core        *coreBean      `inject:""`
+	Components  []Component    `inject:"optional,level=1"` // default level is 1, only current context
+	Elements    []*implElement `inject:"optional,level=1"`
+	Components2 []Component    `inject:"optional,level=2"` // level 2 is current context plus parent context
+	Elements2   []*implElement `inject:"optional,level=2"`
+	testing     *testing.T
 }
 
 func (t *serviceBean) Run() {
@@ -130,7 +131,7 @@ func TestParentCollection(t *testing.T) {
 	coreBean := &coreBean{}
 	parent, err := glue.New(
 		coreBean,
-		&implComponent{value:"fromParent", order: 1},
+		&implComponent{value: "fromParent", order: 1},
 		&implElement{value: "parent", order: 2},
 	)
 	require.NoError(t, err)
@@ -142,7 +143,7 @@ func TestParentCollection(t *testing.T) {
 	serviceBean := &serviceBean{testing: t}
 	child, err := parent.Extend(
 		serviceBean,
-		&implComponent{value:"fromChild", order: 2},
+		&implComponent{value: "fromChild", order: 2},
 		&implElement{value: "ctx", order: 1},
 	)
 	require.NoError(t, err)
@@ -158,8 +159,8 @@ func TestParentCollection(t *testing.T) {
 	require.Equal(t, "fromChild", serviceBean.Components2[1].Information())
 
 	/*
-	Check runtime bean access
-	 */
+		Check runtime bean access
+	*/
 
 	list := parent.Bean(ComponentClass, -1)
 	require.Equal(t, 1, len(list))
@@ -178,8 +179,8 @@ func TestParentCollection(t *testing.T) {
 	require.Equal(t, "parent", list[0].Object().(*implElement).value)
 
 	/*
-	Test interface injected ctx context
-	 */
+		Test interface injected ctx context
+	*/
 
 	list = child.Bean(ComponentClass, 0)
 	require.Equal(t, 1, len(list))
@@ -197,16 +198,16 @@ func TestParentCollection(t *testing.T) {
 	require.Equal(t, 1, len(list))
 	require.Equal(t, "fromChild", list[0].Object().(Component).Information())
 
-	list = child.Bean(ComponentClass, 2)  // include parent context
+	list = child.Bean(ComponentClass, 2) // include parent context
 	require.Equal(t, 2, len(list))
 
-	list = child.Lookup("*glue_test.implComponent", 2)  // include parent context
+	list = child.Lookup("*glue_test.implComponent", 2) // include parent context
 	require.Equal(t, 2, len(list))
 
-	list = child.Bean(ComponentClass, 3)  // include parent context
+	list = child.Bean(ComponentClass, 3) // include parent context
 	require.Equal(t, 2, len(list))
 
-	list = child.Bean(ComponentClass, -1)  // include parent context
+	list = child.Bean(ComponentClass, -1) // include parent context
 	require.Equal(t, 2, len(list))
 
 	require.Equal(t, "fromParent", list[0].Object().(Component).Information())
@@ -254,16 +255,16 @@ func TestChildren(t *testing.T) {
 	coreBean := &coreBean{}
 	serviceBean := &serviceBean{testing: t}
 
-	root := []interface{} {
+	root := []interface{}{
 		coreBean,
-		&implComponent{value:"fromParent", order: 1},
+		&implComponent{value: "fromParent", order: 1},
 		&implElement{value: "parent", order: 2},
 
 		glue.Child("child",
 			serviceBean,
-			&implComponent{value:"fromChild", order: 2},
+			&implComponent{value: "fromChild", order: 2},
 			&implElement{value: "ctx", order: 1},
-			),
+		),
 	}
 
 	parent, err := glue.New(root)

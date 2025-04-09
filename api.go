@@ -161,7 +161,7 @@ type Context interface {
 
 		Example:
 			type requestProcessor struct {
-				app.UserService  `inject`
+				app.UserService  `inject:""`
 			}
 
 			rp := new(requestProcessor)

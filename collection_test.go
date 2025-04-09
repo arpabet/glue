@@ -6,8 +6,8 @@
 package glue_test
 
 import (
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"reflect"
 	"strings"
 	"testing"
@@ -37,19 +37,19 @@ func (t *orderedElementX) BeanOrder() int {
 
 var holderXClass = reflect.TypeOf((*holderX)(nil)) // *holderX
 type holderX struct {
-	Array   []*elementX `inject`
+	Array   []*elementX `inject:""`
 	testing *testing.T
 }
 
 var holderMapClass = reflect.TypeOf((*holderMap)(nil)) // *holderMap
 type holderMap struct {
-	Map     map[string]*elementX `inject`
+	Map     map[string]*elementX `inject:""`
 	testing *testing.T
 }
 
 var orderedHolderXClass = reflect.TypeOf((*orderedHolderX)(nil)) // *orderedHolderX
 type orderedHolderX struct {
-	Array   []*orderedElementX `inject`
+	Array   []*orderedElementX `inject:""`
 	testing *testing.T
 }
 
@@ -238,7 +238,7 @@ func (t *orderedElementImpl) BeanOrder() int {
 }
 
 type holderImpl struct {
-	Array   []Element `inject`
+	Array   []Element `inject:""`
 	testing *testing.T
 }
 
@@ -248,7 +248,7 @@ func (t *holderImpl) Elements() []Element {
 }
 
 type holderMapImpl struct {
-	Map     map[string]Element `inject`
+	Map     map[string]Element `inject:""`
 	testing *testing.T
 }
 

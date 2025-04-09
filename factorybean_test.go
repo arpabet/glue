@@ -6,8 +6,8 @@
 package glue_test
 
 import (
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"reflect"
 	"strings"
 	"testing"
@@ -48,7 +48,7 @@ func (t *beanConstructed) Run() error {
 type factoryBeanExample struct {
 	glue.FactoryBean
 	testing     *testing.T
-	SomeService *someService `inject`
+	SomeService *someService `inject:""`
 }
 
 func (t *factoryBeanExample) Object() (interface{}, error) {
@@ -71,7 +71,7 @@ func (t *factoryBeanExample) Singleton() bool {
 }
 
 type applicationContext struct {
-	BeanConstructed *beanConstructed `inject`
+	BeanConstructed *beanConstructed `inject:""`
 }
 
 type repeatedFactoryBeanExample struct {
@@ -194,7 +194,7 @@ func (t *beanConstructedImpl) Run() error {
 type factoryBeanImpl struct {
 	glue.FactoryBean
 	testing     *testing.T
-	SomeService SomeService `inject`
+	SomeService SomeService `inject:""`
 }
 
 func (t *factoryBeanImpl) Object() (interface{}, error) {

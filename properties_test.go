@@ -98,7 +98,7 @@ type beanWithProperties struct {
 	ArrFileMode []os.FileMode `value:"example.filemode.arr,default=-rw-rw-r--;-rw-rw-rw-"`
 	//FileModeFn func() (time.Time, error) `value:"example.filemode"`
 
-	Properties glue.Properties `inject`
+	Properties glue.Properties `inject:""`
 }
 
 type oneFile struct {

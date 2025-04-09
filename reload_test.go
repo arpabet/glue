@@ -6,8 +6,8 @@
 package glue_test
 
 import (
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"reflect"
 	"testing"
 )
@@ -30,7 +30,7 @@ func (t *reloadableBean) Destroy() error {
 }
 
 type topBean struct {
-	ReloadableBean *reloadableBean `inject`
+	ReloadableBean *reloadableBean `inject:""`
 }
 
 func TestBeanReload(t *testing.T) {

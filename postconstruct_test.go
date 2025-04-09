@@ -7,8 +7,8 @@ package glue_test
 
 import (
 	"errors"
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"reflect"
 	"strings"
 	"testing"
@@ -69,7 +69,7 @@ type ClientService interface {
 
 type beanClient struct {
 	testing       *testing.T
-	ServerService ServerService `inject`
+	ServerService ServerService `inject:""`
 }
 
 func (t *beanClient) PostConstruct() error {
@@ -100,8 +100,8 @@ func TestPostConstruct(t *testing.T) {
 		  enum all interfaces in context, to make sure that all of them are initialized
 		*/
 		&struct {
-			ClientService ClientService `inject`
-			ServerService ServerService `inject`
+			ClientService ClientService `inject:""`
+			ServerService ServerService `inject:""`
 		}{},
 	)
 	require.NoError(t, err)
@@ -123,8 +123,8 @@ func TestPostConstructWithError(t *testing.T) {
 		  enum all interfaces in context, to make sure that all of them are initialized
 		*/
 		&struct {
-			ClientService ClientService `inject`
-			ServerService ServerService `inject`
+			ClientService ClientService `inject:""`
+			ServerService ServerService `inject:""`
 		}{},
 	)
 
@@ -142,7 +142,7 @@ Cycle dependency test with PostConstruct method
 type aService struct {
 	glue.InitializingBean
 	testing  *testing.T
-	BService *bService `inject`
+	BService *bService `inject:""`
 }
 
 func (t *aService) PostConstruct() error {
@@ -154,7 +154,7 @@ func (t *aService) PostConstruct() error {
 type bService struct {
 	glue.InitializingBean
 	testing  *testing.T
-	CService *cService `inject`
+	CService *cService `inject:""`
 }
 
 func (t *bService) PostConstruct() error {
@@ -166,8 +166,8 @@ func (t *bService) PostConstruct() error {
 type cService struct {
 	glue.InitializingBean
 	testing  *testing.T
-	AService *aService `inject`
-	//LazyAService func() *aService `inject`
+	AService *aService `inject:""`
+	//LazyAService func() *aService `inject:""`
 }
 
 func (t *cService) PostConstruct() error {

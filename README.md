@@ -22,7 +22,7 @@ var ctx, err = glue.New(
     &configServiceImpl{},
     &userServiceImpl{},
     &struct {
-        UserService UserService `inject`  // injection based by interface or pointer 
+        UserService UserService `inject:""`  // injection based by interface or pointer 
     }{}, 
 )
 require.Nil(t, err)
@@ -34,14 +34,14 @@ Glue Framework does not support anonymous injection fields.
 Wrong:
 ```
 type wrong struct {
-    UserService `inject`  // since the *wrong structure also implements UserService interface it can lead to cycle and wrong injections in context
+    UserService `inject:""`  // since the *wrong structure also implements UserService interface it can lead to cycle and wrong injections in context
 }
 ```
 
 Right:
 ```
 type right struct {
-    UserService UserService `inject`  // guarantees less conflicts with method names and dependencies
+    UserService UserService `inject:""`  // guarantees less conflicts with method names and dependencies
 }
 ```
 
@@ -62,7 +62,7 @@ This funtionality is perfect to inject Lazy implementations.
 Example:
 ```
 type holder struct {
-	StringArray   func() []string `inject`
+	StringArray   func() []string `inject:""`
 }
 
 var ctx, err = glue.New (
@@ -82,8 +82,8 @@ If you need to inject collection of primitive types, please use function injecti
 Example:
 ```
 type holderImpl struct {
-	Array   []Element          `inject`
-	Map     map[string]Element `inject`
+	Array   []Element          `inject:""`
+	Map     map[string]Element `inject:""`
 }
 
 var ElementClass = reflect.TypeOf((*Element)(nil)).Elem()
@@ -106,7 +106,7 @@ This functionality could be used for safe bean initialization logic.
 Example:
 ```
 type component struct {
-    Dependency  *anotherComponent  `inject`
+    Dependency  *anotherComponent  `inject:""`
 }
 
 func (t *component) PostConstruct() error {
@@ -130,7 +130,7 @@ For each bean that implements DisposableBean interface, Glue Framework invokes D
 Example:
 ```
 type component struct {
-    Dependency  *anotherComponent  `inject`
+    Dependency  *anotherComponent  `inject:""`
 }
 
 func (t *component) Destroy() error {
@@ -183,7 +183,7 @@ type beanConstructed struct {
 }
 
 type factory struct {
-    Dependency  *anotherComponent  `inject`
+    Dependency  *anotherComponent  `inject:""`
 }
 
 func (t *factory) Object() (interface{}, error) {
@@ -218,7 +218,7 @@ type component struct {
 }
 
 type anotherComponent struct {
-    Dependency  *component  `inject`
+    Dependency  *component  `inject:""`
     Initialized bool
 }
 

@@ -1137,7 +1137,7 @@ type childContext struct {
 	name string
 	scan []interface{}
 
-	Parent Context `inject`
+	Parent Context `inject:""`
 
 	extendOnes sync.Once
 	ctx        Context
