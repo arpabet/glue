@@ -7,12 +7,13 @@ package glue
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -337,6 +338,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 			}
 			var propertyName string
 			var defaultValue string
+			var hasDefaultValue bool
 			var layout string
 			pairs := strings.Split(valueTag, ",")
 			for i, pair := range pairs {
@@ -351,6 +353,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 				case "default":
 					if len(kv) > 1 {
 						defaultValue = strings.TrimSpace(kv[1])
+						hasDefaultValue = true
 					}
 				case "layout":
 					if len(kv) > 1 {
@@ -362,13 +365,14 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 				return nil, errors.Errorf("empty property name in field '%s' with type '%v' on position %d in %v with 'value' tag", field.Name, field.Type, j, classPtr)
 			}
 			def := &propInjectionDef{
-				class:        class,
-				fieldNum:     j,
-				fieldName:    field.Name,
-				fieldType:    field.Type,
-				propertyName: propertyName,
-				defaultValue: defaultValue,
-				layout:       layout,
+				class:           class,
+				fieldNum:        j,
+				fieldName:       field.Name,
+				fieldType:       field.Type,
+				propertyName:    propertyName,
+				defaultValue:    defaultValue,
+				hasDefaultValue: hasDefaultValue,
+				layout:          layout,
 			}
 			properties = append(properties, def)
 			continue

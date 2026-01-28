@@ -7,8 +7,6 @@ package glue_test
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/require"
-	"go.arpabet.com/glue"
 	"io/fs"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +14,9 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 )
 
 var propertiesMap = map[string]interface{}{
@@ -344,6 +345,18 @@ func verifyPropertyBean(t *testing.T, b *beanWithProperties) {
 	require.Equal(t, []time.Time{tm21, tm22}, b.ArrTime)
 
 	require.Equal(t, []os.FileMode{os.FileMode(0664), os.FileMode(0666)}, b.ArrFileMode)
+
+}
+
+func TestRequiredProperties(t *testing.T) {
+
+	b := new(beanWithProperties)
+
+	_, err := glue.New(
+		b,
+	)
+
+	require.Error(t, err)
 
 }
 

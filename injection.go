@@ -7,7 +7,6 @@ package glue
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"io/fs"
 	"os"
 	"reflect"
@@ -17,6 +16,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -126,6 +127,11 @@ type propInjectionDef struct {
 		Default value of the property to inject
 	*/
 	defaultValue string
+
+	/*
+		Flag set if default value exist
+	*/
+	hasDefaultValue bool
 
 	/*
 		Layout for date-time property
@@ -453,7 +459,14 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 		return errors.Errorf("field '%s' in class '%v' is not public", t.fieldName, t.class)
 	}
 
-	strValue := properties.GetString(t.propertyName, t.defaultValue)
+	var strValue string
+	if value, ok := properties.Get(t.propertyName); ok {
+		strValue = value
+	} else if t.hasDefaultValue {
+		strValue = t.defaultValue
+	} else {
+		return errors.Errorf("property '%s' in class '%v' does not have the default value, and did not find in property resolvers %+v", t.fieldName, t.class, properties.PropertyResolvers())
+	}
 
 	v, err := convertProperty(strValue, t.fieldType, t.layout)
 	if err != nil {
