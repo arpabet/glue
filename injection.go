@@ -48,11 +48,11 @@ type injectionDef struct {
 	/*
 		Field is Slice of beans
 	*/
-	slice bool
+	isSlice bool
 	/*
 		Field is Map of beans
 	*/
-	table bool
+	isMap bool
 	/*
 		Lazy injection represented by function
 	*/
@@ -134,9 +134,9 @@ type propInjectionDef struct {
 	hasDefaultValue bool
 
 	/*
-		Layout for date-time property
+		Time Format for date-time property
 	*/
-	layout string
+	timeFormat string
 }
 
 /*
@@ -230,7 +230,7 @@ func (t *injection) inject(deep []beanlist) error {
 		return nil
 	}
 
-	if t.injectionDef.slice {
+	if t.injectionDef.isSlice {
 
 		newSlice := field
 		var factoryList []*bean
@@ -264,7 +264,7 @@ func (t *injection) inject(deep []beanlist) error {
 		return nil
 	}
 
-	if t.injectionDef.table {
+	if t.injectionDef.isMap {
 
 		field.Set(reflect.MakeMap(field.Type()))
 
@@ -364,7 +364,7 @@ func (t *injectionDef) inject(value *reflect.Value, deep []beanlist) error {
 		return nil
 	}
 
-	if t.slice {
+	if t.isSlice {
 
 		newSlice := field
 		for _, bean := range list {
@@ -378,7 +378,7 @@ func (t *injectionDef) inject(value *reflect.Value, deep []beanlist) error {
 		return nil
 	}
 
-	if t.table {
+	if t.isMap {
 
 		field.Set(reflect.MakeMap(field.Type()))
 
@@ -468,7 +468,7 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 		return errors.Errorf("property '%s' in class '%v' does not have the default value, and did not find in property resolvers %+v", t.fieldName, t.class, properties.PropertyResolvers())
 	}
 
-	v, err := convertProperty(strValue, t.fieldType, t.layout)
+	v, err := convertProperty(strValue, t.fieldType, t.timeFormat)
 	if err != nil {
 		return errors.Errorf("property '%s' in class '%v' has convert error, property resolvers %+v, %v", t.fieldName, t.class, properties.PropertyResolvers(), err)
 	}
@@ -478,7 +478,7 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 
 }
 
-func convertProperty(s string, t reflect.Type, layout string) (val reflect.Value, err error) {
+func convertProperty(s string, t reflect.Type, timeFormat string) (val reflect.Value, err error) {
 	var v interface{}
 
 	switch {
@@ -487,7 +487,7 @@ func convertProperty(s string, t reflect.Type, layout string) (val reflect.Value
 		parts := trimSplit(s, ";")
 		slice := reflect.MakeSlice(t, 0, len(parts))
 		for _, s := range parts {
-			val, err := convertProperty(s, t.Elem(), layout)
+			val, err := convertProperty(s, t.Elem(), timeFormat)
 			if err != nil {
 				return slice, err
 			}
@@ -499,10 +499,10 @@ func convertProperty(s string, t reflect.Type, layout string) (val reflect.Value
 		v, err = time.ParseDuration(s)
 
 	case isTime(t):
-		if layout == "" {
-			layout = time.RFC3339
+		if timeFormat == "" {
+			timeFormat = time.RFC3339
 		}
-		v, err = time.Parse(layout, s)
+		v, err = time.Parse(timeFormat, s)
 
 	case isFileMode(t):
 		v, err = parseFileMode(s), nil

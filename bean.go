@@ -339,7 +339,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 			var propertyName string
 			var defaultValue string
 			var hasDefaultValue bool
-			var layout string
+			var timeFormat string
 			pairs := strings.Split(valueTag, ",")
 			for i, pair := range pairs {
 				p := strings.TrimSpace(pair)
@@ -357,7 +357,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 					}
 				case "layout":
 					if len(kv) > 1 {
-						layout = strings.TrimSpace(kv[1])
+						timeFormat = strings.TrimSpace(kv[1])
 					}
 				}
 			}
@@ -372,7 +372,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 				propertyName:    propertyName,
 				defaultValue:    defaultValue,
 				hasDefaultValue: hasDefaultValue,
-				layout:          layout,
+				timeFormat:      timeFormat,
 			}
 			properties = append(properties, def)
 			continue
@@ -433,8 +433,8 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 				fieldName: field.Name,
 				fieldType: fieldType,
 				lazy:      lazy,
-				slice:     fieldSlice,
-				table:     fieldMap,
+				isSlice:   fieldSlice,
+				isMap:     fieldMap,
 				optional:  optional,
 				qualifier: qualifier,
 				level:     level,

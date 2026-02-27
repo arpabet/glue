@@ -8,8 +8,6 @@ package glue
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 	"io"
 	"os"
 	"reflect"
@@ -18,6 +16,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 )
 
 var DefaultCloseTimeout = time.Minute
@@ -282,10 +283,10 @@ func createContext(parent *context, properties Properties, scan []interface{}) (
 							attrs = fmt.Sprintf("[%s]", strings.Join(attr, ","))
 						}
 						var prefix string
-						if injectDef.slice {
+						if injectDef.isSlice {
 							prefix = "[]"
 						}
-						if injectDef.table {
+						if injectDef.isMap {
 							prefix = "map[string]"
 						}
 						verbose.Printf("	Field %s%v %s\n", prefix, injectDef.fieldType, attrs)
