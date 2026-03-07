@@ -204,6 +204,37 @@ func orderBeans(candidates []*bean) []*bean {
 	}
 }
 
+func selectSingleCandidate(fieldName string, class reflect.Type, list []*bean) (*bean, error) {
+	if len(list) == 0 {
+		return nil, nil
+	}
+	if len(list) == 1 {
+		return list[0], nil
+	}
+
+	primaryIdx := -1
+	for i := range list {
+		if list[i].primary {
+			if primaryIdx != -1 {
+				return nil, errors.Errorf(
+					"field '%s' in class '%v' cannot be injected: multiple candidates %+v contain multiple primary beans",
+					fieldName, class, list,
+				)
+			}
+			primaryIdx = i
+		}
+	}
+
+	if primaryIdx == -1 {
+		return nil, errors.Errorf(
+			"field '%s' in class '%v' cannot be injected with multiple candidates %+v",
+			fieldName, class, list,
+		)
+	}
+
+	return list[primaryIdx], nil
+}
+
 /*
 *
 Inject value in to the field by using reflection
@@ -301,11 +332,10 @@ func (t *injection) inject(deep []beanlist) error {
 		return nil
 	}
 
-	if len(list) > 1 {
-		return errors.Errorf("field '%s' in class '%v' can not be injected with multiple candidates %+v", t.injectionDef.fieldName, t.injectionDef.class, list)
+	impl, err := selectSingleCandidate(t.injectionDef.fieldName, t.injectionDef.class, list)
+	if err != nil {
+		return err
 	}
-
-	impl := list[0]
 
 	if impl.beenFactory != nil {
 		if t.injectionDef.lazy {
@@ -396,12 +426,11 @@ func (t *injectionDef) inject(value *reflect.Value, deep []beanlist) error {
 		return nil
 	}
 
-	if len(list) > 1 {
-		return errors.Errorf("field '%s' in class '%v' can not be injected with multiple candidates %+v", t.fieldName, t.class, list)
+	impl, err := selectSingleCandidate(t.fieldName, t.class, list)
+	if err != nil {
+		return err
 	}
-
-	impl := list[0]
-
+	
 	if impl.lifecycle != BeanInitialized {
 		return errors.Errorf("field '%s' in class '%v' can not be injected with non-initialized bean %+v", t.fieldName, t.class, impl)
 	}

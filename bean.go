@@ -68,6 +68,11 @@ type bean struct {
 	order   int
 
 	/**
+	Primary flag - true if this is the primary bean for its type
+	*/
+	primary bool
+
+	/**
 	Factory of the bean if exist
 	*/
 	beenFactory *factory
@@ -454,11 +459,17 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 		ordered = true
 		order = orderedBean.BeanOrder()
 	}
+	primary := false
+	if primaryBean, ok := obj.(PrimaryBean); ok {
+
+		primary = primaryBean.IsPrimaryBean()
+	}
 	return &bean{
 		name:      name,
 		qualifier: qualifier,
 		ordered:   ordered,
 		order:     order,
+		primary:   primary,
 		obj:       obj,
 		valuePtr:  valuePtr,
 		beanDef: &beanDef{

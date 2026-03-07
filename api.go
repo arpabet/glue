@@ -330,6 +330,22 @@ type OrderedBean interface {
 	BeanOrder() int
 }
 
+/*
+This interface used to mark a bean as primary among multiple implementations of the same interface.
+When multiple beans implement the same interface, the primary bean will be injected by default.
+This does not affect collection and order of the beans.
+If two+ primary beans found for one single field injection the ambiguation error would be returned.
+*/
+var PrimaryBeanClass = reflect.TypeOf((*PrimaryBean)(nil)).Elem()
+
+type PrimaryBean interface {
+
+	/*
+		Returns true if this bean should be considered the primary implementation
+	*/
+	IsPrimaryBean() bool
+}
+
 /**
 Resource source is using to add bind resources in to the context
 */
