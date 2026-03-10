@@ -16,6 +16,9 @@ import (
 
 type BeanLifecycle int32
 
+// ActiveProfilesProperty - use mostly in Child containers
+var ActiveProfilesProperty = "glue.profiles.active"
+
 const (
 	BeanAllocated BeanLifecycle = iota
 	BeanCreated
@@ -89,6 +92,36 @@ type Bean interface {
 }
 
 var ContainerClass = reflect.TypeOf((*Container)(nil)).Elem()
+
+type ContainerOptions struct {
+	Context        context.Context
+	Properties     Properties
+	ActiveProfiles []string
+}
+
+type ContainerOption func(*ContainerOptions)
+
+func WithContext(ctx context.Context) ContainerOption {
+	return func(opts *ContainerOptions) {
+		opts.Context = ctx
+	}
+}
+
+func WithProperties(properties Properties) ContainerOption {
+	return func(opts *ContainerOptions) {
+		opts.Properties = properties
+	}
+}
+
+func WithProfiles(profiles ...string) ContainerOption {
+	return func(opts *ContainerOptions) {
+		if len(profiles) == 0 {
+			opts.ActiveProfiles = nil
+			return
+		}
+		opts.ActiveProfiles = append([]string(nil), profiles...)
+	}
+}
 
 /**
 Container interface is why this framework exist, maintains the set of beans and relations between them.
@@ -213,6 +246,28 @@ type Container interface {
 	String() string
 }
 
+var ProfileBeanClass = reflect.TypeOf((*ProfileBean)(nil)).Elem()
+
+/*
+	    ProfileBean is implemented by beans that should only be registered when specific profiles are active.
+
+		Default property for active profiles: glue.profiles.active
+
+		Profile expression syntax:
+
+		"dev" — active when "dev" profile is active
+		"!prod" — active when "prod" profile is NOT active
+		"dev|staging" — active when either "dev" or "staging" is active
+		"dev&local" — active when both "dev" and "local" are active
+*/
+type ProfileBean interface {
+
+	/*
+		BeanProfile - returns the string that represents pattern of current profile where bean should be included in container
+	*/
+	BeanProfile() string // e.g., "dev", "!prod", "dev|staging"
+}
+
 /*
 This interface used to provide pre-scanned instances in glue.New method.
 When glue sees that instance implements Scanner interface, instead of adding
@@ -234,6 +289,33 @@ type Scanner interface {
 		Returns pre-scanned instances
 	*/
 	ScannerBeans() []interface{}
+}
+
+/*
+	Interface that joins ProfileBean and Scanner
+*/
+
+type ProfileScanner interface {
+	ProfileBean
+	Scanner
+}
+
+type profileScanner struct {
+	profile string
+	beans   []interface{}
+}
+
+func (t *profileScanner) BeanProfile() string {
+	return t.profile
+}
+
+func (t *profileScanner) ScannerBeans() []interface{} {
+	return t.beans
+}
+
+// IfProfile Shortcut method for container creation
+func IfProfile(profile string, scan ...interface{}) ProfileScanner {
+	return &profileScanner{profile: profile, beans: scan}
 }
 
 /*

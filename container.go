@@ -69,15 +69,52 @@ type container struct {
 }
 
 func New(scan ...interface{}) (Container, error) {
-	return createContainer(context.Background(), nil, NewProperties(), scan)
+	return NewWithOptions(nil, scan...)
+}
+
+func NewWithProfiles(activeProfiles []string, scan ...interface{}) (Container, error) {
+	return NewWithOptions([]ContainerOption{WithProfiles(activeProfiles...)}, scan...)
 }
 
 func NewWithContext(ctx context.Context, scan ...interface{}) (Container, error) {
-	return createContainer(ctx, nil, NewProperties(), scan)
+	return NewWithOptions([]ContainerOption{WithContext(ctx)}, scan...)
 }
 
 func NewWithProperties(ctx context.Context, properties Properties, scan ...interface{}) (Container, error) {
-	return createContainer(ctx, nil, properties, scan)
+	return NewWithOptions([]ContainerOption{
+		WithContext(ctx),
+		WithProperties(properties),
+	}, scan...)
+}
+
+func NewWithOptions(options []ContainerOption, scan ...interface{}) (Container, error) {
+	return createContainer(nil, buildContainerOptions(options), scan)
+}
+
+func defaultContainerOptions() ContainerOptions {
+	return ContainerOptions{
+		Context:    context.Background(),
+		Properties: NewProperties(),
+	}
+}
+
+func buildContainerOptions(options []ContainerOption) ContainerOptions {
+	opts := defaultContainerOptions()
+	for _, opt := range options {
+		if opt != nil {
+			opt(&opts)
+		}
+	}
+	if opts.Context == nil {
+		opts.Context = context.Background()
+	}
+	if opts.Properties == nil {
+		opts.Properties = NewProperties()
+	}
+	if opts.ActiveProfiles != nil {
+		opts.ActiveProfiles = append([]string(nil), opts.ActiveProfiles...)
+	}
+	return opts
 }
 
 func (t *container) Extend(scan ...interface{}) (Container, error) {
@@ -85,7 +122,10 @@ func (t *container) Extend(scan ...interface{}) (Container, error) {
 	properties := NewProperties()
 	properties.Extend(t.properties)
 
-	return createContainer(context.Background(), t, properties, scan)
+	return createContainer(t, ContainerOptions{
+		Context:    context.Background(),
+		Properties: properties,
+	}, scan)
 }
 
 func (t *container) ExtendWithContext(ctx context.Context, scan ...interface{}) (Container, error) {
@@ -93,7 +133,10 @@ func (t *container) ExtendWithContext(ctx context.Context, scan ...interface{}) 
 	properties := NewProperties()
 	properties.Extend(t.properties)
 
-	return createContainer(ctx, t, properties, scan)
+	return createContainer(t, ContainerOptions{
+		Context:    ctx,
+		Properties: properties,
+	}, scan)
 }
 
 func (t *container) Parent() (Container, bool) {
@@ -104,7 +147,23 @@ func (t *container) Parent() (Container, bool) {
 	}
 }
 
-func createContainer(ctx context.Context, parent *container, properties Properties, scan []interface{}) (ctn *container, err error) {
+func getActiveProfiles(properties Properties) []string {
+	var profiles []string
+	if properties == nil {
+		return profiles
+	}
+	if commaListStr, ok := properties.Get(ActiveProfilesProperty); ok {
+		for _, part := range strings.Split(commaListStr, ",") {
+			profile := strings.TrimSpace(part)
+			if profile != "" {
+				profiles = append(profiles, profile)
+			}
+		}
+	}
+	return profiles
+}
+
+func createContainer(parent *container, options ContainerOptions, scan []interface{}) (ctn *container, err error) {
 
 	core := make(map[reflect.Type][]*bean)
 	pointers := make(map[reflect.Type][]*injection)
@@ -114,6 +173,19 @@ func createContainer(ctx context.Context, parent *container, properties Properti
 	var primaryList []*bean
 	var secondaryList []*bean
 
+	activeProfiles := options.ActiveProfiles
+	if len(activeProfiles) == 0 {
+		activeProfiles = getActiveProfiles(options.Properties)
+	}
+
+	active := make(map[string]struct{}, len(activeProfiles))
+	for _, profile := range activeProfiles {
+		profile = strings.TrimSpace(profile)
+		if profile != "" {
+			active[profile] = struct{}{}
+		}
+	}
+
 	ctn = &container{
 		parent: parent,
 		core:   core,
@@ -122,7 +194,7 @@ func createContainer(ctx context.Context, parent *container, properties Properti
 			beansByType:     make(map[reflect.Type][]*bean),
 			resourceSources: make(map[string]*resourceSource),
 		},
-		properties: properties,
+		properties: options.Properties,
 	}
 
 	// add container bean to registry
@@ -148,7 +220,7 @@ func createContainer(ctx context.Context, parent *container, properties Properti
 	core[propertiesBean.beanDef.classPtr] = []*bean{propertiesBean}
 
 	// scan
-	err = forEach("", scan, func(pos string, obj interface{}) (err error) {
+	err = forEach(active, "", scan, func(pos string, obj interface{}) (err error) {
 
 		var resolver bool
 
@@ -506,7 +578,7 @@ func createContainer(ctx context.Context, parent *container, properties Properti
 	/**
 	PostConstruct beans
 	*/
-	if err := ctn.postConstruct(ctx, primaryList, secondaryList); err != nil {
+	if err := ctn.postConstruct(options.Context, primaryList, secondaryList); err != nil {
 		ctn.closeWithTimeout(DefaultCloseTimeout)
 		return nil, err
 	} else {
@@ -651,22 +723,72 @@ func registerBean(registry map[reflect.Type][]*bean, classPtr reflect.Type, bean
 	registry[classPtr] = append(registry[classPtr], bean)
 }
 
-func forEach(initialPos string, scan []interface{}, cb func(i string, obj interface{}) error) error {
+func forEach(active map[string]struct{}, initialPos string, scan []interface{}, cb func(i string, obj interface{}) error) error {
 	// Use a map to track visited objects by their pointer address
 	visited := make(map[uintptr]bool)
 
 	// Call helper function with visited map
-	return forEachRecursive(initialPos, scan, cb, visited)
+	return forEachRecursive(active, initialPos, scan, cb, visited)
 }
 
-func forEachRecursive(initialPos string, scan []interface{}, cb func(i string, obj interface{}) error, visited map[uintptr]bool) error {
-	for j, item := range scan {
-		var pos string
-		if len(initialPos) > 0 {
-			pos = fmt.Sprintf("%s.%d", initialPos, j)
-		} else {
-			pos = strconv.Itoa(j)
+/*
+	Profile expression syntax:
+
+	"dev" — active when "dev" profile is active
+	"!prod" — active when "prod" profile is NOT active
+	"dev|staging" — active when either "dev" or "staging" is active
+	"dev&local" — active when both "dev" and "local" are active
+*/
+
+func isProfileActive(active map[string]struct{}, profileExpression string) bool {
+	profileExpression = strings.TrimSpace(profileExpression)
+	if profileExpression == "" {
+		return true
+	}
+
+	for _, orPart := range strings.Split(profileExpression, "|") {
+		orPart = strings.TrimSpace(orPart)
+		if orPart == "" {
+			continue
 		}
+
+		matched := true
+		for _, andPart := range strings.Split(orPart, "&") {
+			andPart = strings.TrimSpace(andPart)
+			if andPart == "" {
+				matched = false
+				break
+			}
+
+			negated := strings.HasPrefix(andPart, "!")
+			if negated {
+				andPart = strings.TrimSpace(andPart[1:])
+				if andPart == "" {
+					matched = false
+					break
+				}
+			}
+
+			_, ok := active[andPart]
+			if negated {
+				ok = !ok
+			}
+			if !ok {
+				matched = false
+				break
+			}
+		}
+
+		if matched {
+			return true
+		}
+	}
+
+	return false
+}
+
+func forEachRecursive(active map[string]struct{}, initialPos string, scan []interface{}, cb func(i string, obj interface{}) error, visited map[uintptr]bool) error {
+	for j, item := range scan {
 
 		if item == nil {
 			continue
@@ -686,13 +808,26 @@ func forEachRecursive(initialPos string, scan []interface{}, cb func(i string, o
 			visited[addr] = true
 		}
 
+		if profileBean, ok := item.(ProfileBean); ok {
+			if !isProfileActive(active, profileBean.BeanProfile()) {
+				continue
+			}
+		}
+
+		var pos string
+		if len(initialPos) > 0 {
+			pos = fmt.Sprintf("%s.%d", initialPos, j)
+		} else {
+			pos = strconv.Itoa(j)
+		}
+
 		switch obj := item.(type) {
 		case Scanner:
-			if err := forEachRecursive(pos, obj.ScannerBeans(), cb, visited); err != nil {
+			if err := forEachRecursive(active, pos, obj.ScannerBeans(), cb, visited); err != nil {
 				return err
 			}
 		case []interface{}:
-			if err := forEachRecursive(pos, obj, cb, visited); err != nil {
+			if err := forEachRecursive(active, pos, obj, cb, visited); err != nil {
 				return err
 			}
 		case interface{}:
