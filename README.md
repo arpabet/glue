@@ -286,6 +286,52 @@ func (t *factory) Singleton() bool {
 }
 ```
 
+### glue.ContextFactoryBean
+
+ContextFactoryBean is similar to `glue.FactoryBean`, but receives the current container construction context in `Object(ctx context.Context)`.
+This is useful when produced objects depend on deadlines, cancellation, request-scoped values, trace data, or context-aware secret/config access.
+
+The context comes from:
+* `glue.NewWithContext(...)`
+* `glue.NewWithOptions(...)` with `glue.WithContext(...)`
+* `Container.ExtendWithContext(...)`
+* `ChildContainer.ObjectWithContext(...)`
+* `context.Background()` when no explicit context is provided
+
+Example:
+```
+type factory struct {
+    Dependency *anotherComponent `inject:""`
+}
+
+func (t *factory) Object(ctx context.Context) (interface{}, error) {
+    requestID, _ := ctx.Value("request_id").(string)
+    if err := t.Dependency.DoSomething(); err != nil {
+        return nil, err
+    }
+    return &beanConstructed{
+        RequestID: requestID,
+    }, nil
+}
+
+func (t *factory) ObjectType() reflect.Type {
+    return beanConstructedClass
+}
+
+func (t *factory) ObjectName() string {
+    return ""
+}
+
+func (t *factory) Singleton() bool {
+    return true
+}
+```
+
+Corner cases:
+* `ContextFactoryBean` is preferred over legacy `FactoryBean` when a factory implements the context-aware interface.
+* Runtime `container.Inject(...)` can still materialize factory products; in that path Glue uses `context.Background()`.
+* Factory-produced objects are still treated as produced instances, not full managed beans. They do not automatically receive `value` property injection, `PostConstruct(ctx)`, or `Destroy(ctx)`.
+
 ### Lazy fields
 
 Added support for lazy fields, that defined like this: `inject:"lazy"`.
@@ -540,4 +586,3 @@ Lookup level defines how deep we will go in to beans:
 
 If you find a bug or issue, please create a ticket.
 For now no external contributions are allowed.
-
