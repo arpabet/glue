@@ -123,6 +123,35 @@ func (t *component) PostConstruct() error {
 }
 ``` 
 
+### glue.ContextInitializingBean
+
+For each bean that implements ContextInitializingBean interface, Glue Framework invokes `PostConstruct(context.Context)` during initialization.
+The context comes from `glue.NewWithContext(...)`, `glue.NewWithOptions(...)` with `glue.WithContext(...)`, or `context.Background()` when no explicit context is provided.
+
+Example:
+```
+type component struct {
+    RequestID string
+}
+
+func (t *component) PostConstruct(ctx context.Context) error {
+    if requestID, ok := ctx.Value("request_id").(string); ok {
+        t.RequestID = requestID
+    }
+    return nil
+}
+
+ctx := context.WithValue(context.Background(), "request_id", "abc-123")
+ctn, err := glue.NewWithContext(ctx, &component{})
+require.Nil(t, err)
+defer ctn.Close()
+```
+
+Corner cases:
+* If a bean implements `ContextInitializingBean`, the context-aware method is used for initialization.
+* `glue.New(...)` still provides `context.Background()`, so `PostConstruct(ctx)` is always called with a non-nil context.
+* If `PostConstruct(ctx)` returns an error, container creation fails.
+
 ### glue.DisposableBean
 
 For each bean that implements DisposableBean interface, Glue Framework invokes Destroy() method at the time of closing container in reverse order of how beans were initialized.
@@ -138,6 +167,36 @@ func (t *component) Destroy() error {
     return t.Dependency.DoSomething()
 }
 ```
+
+### glue.ContextDisposableBean
+
+For each bean that implements ContextDisposableBean interface, Glue Framework invokes `Destroy(context.Context)` when the container is closed.
+The context comes from `CloseWithContext(ctx)`, or `context.Background()` when `Close()` is used.
+
+Example:
+```
+type component struct {
+    AuditID string
+}
+
+func (t *component) Destroy(ctx context.Context) error {
+    if auditID, ok := ctx.Value("audit_id").(string); ok {
+        t.AuditID = auditID
+    }
+    return nil
+}
+
+ctn, err := glue.New(&component{})
+require.Nil(t, err)
+
+destroyCtx := context.WithValue(context.Background(), "audit_id", "shutdown-42")
+require.Nil(t, ctn.CloseWithContext(destroyCtx))
+```
+
+Corner cases:
+* `Close()` still destroys beans that implement `ContextDisposableBean`, using `context.Background()`.
+* If `Destroy(ctx)` returns an error, container close returns that error.
+* Child containers created through `glue.Child(...)` also receive the same close context when parent `CloseWithContext(ctx)` is used.
 
 ### glue.NamedBean
 
@@ -280,6 +339,88 @@ if t.Dependency != nil {
 }
 ```
 
+### Profiles
+
+Glue supports profile-based bean registration during container scan.
+This is useful when applications have multiple environments or hierarchical containers where each level may enable a different set of beans.
+
+Active profiles can be provided in two ways:
+* Explicitly in code by using `glue.NewWithProfiles(...)` or `glue.NewWithOptions(...)`
+* By property lookup through `glue.profiles.active`
+
+Profile expressions:
+* `"dev"`: active when profile `dev` is active
+* `"!prod"`: active when profile `prod` is not active
+* `"dev|staging"`: active when either `dev` or `staging` is active
+* `"dev&local"`: active when both `dev` and `local` are active
+
+Bean-level example:
+```
+type devStorage struct {
+}
+
+func (t *devStorage) BeanProfile() string {
+    return "dev"
+}
+
+ctn, err := glue.NewWithProfiles([]string{"dev"},
+    &devStorage{},
+)
+require.Nil(t, err)
+defer ctn.Close()
+```
+
+Scanner-level example with shortcut wrapper:
+```
+ctn, err := glue.NewWithProfiles([]string{"prod"},
+    glue.IfProfile("prod",
+        &prodStorage{},
+        &prodMetrics{},
+    ),
+    glue.IfProfile("dev|local",
+        &debugHandler{},
+    ),
+)
+require.Nil(t, err)
+defer ctn.Close()
+```
+
+Options-based example:
+```
+ctn, err := glue.NewWithOptions([]glue.ContainerOption{
+    glue.WithProfiles("dev", "local"),
+}, 
+    &devStorage{},
+    &debugHandler{},
+)
+require.Nil(t, err)
+defer ctn.Close()
+```
+
+Property-based example:
+```
+props := glue.NewProperties()
+props.Set("glue.profiles.active", "dev,local")
+
+ctn, err := glue.NewWithOptions([]glue.ContainerOption{
+    glue.WithProperties(props),
+},
+    &devStorage{},
+    &debugHandler{},
+)
+require.Nil(t, err)
+defer ctn.Close()
+```
+
+Corner cases:
+* Profile filtering happens during scan. If active profiles are provided explicitly with `WithProfiles(...)` or `NewWithProfiles(...)`, they are used immediately.
+* If active profiles come from properties, they must already be available through the `Properties` object or through its registered resolvers before the container starts scanning beans.
+* `PropertyResolver` based activation works well for dynamic sources such as environment-backed profile lookup.
+* Scanned `PropertySource` files are loaded after scan-time profile filtering. Because of that, `glue.profiles.active` from a `PropertySource` does not affect bean inclusion in that same container creation pass.
+* In a parent-child hierarchy this is often acceptable: the parent can load property files first, and child containers created later via `Extend(...)` can resolve `glue.profiles.active` from inherited properties or property resolvers.
+* If a `Scanner` implements `ProfileBean`, the whole scanner is skipped when the profile does not match.
+* Beans returned by `ScannerBeans()` may also implement `ProfileBean`, which allows fine-grained filtering inside a scanner.
+
 ### Extend
 
 Glue Framework has method Extend to create inherited container whereas parent sees only own beans, extended container sees parent and own glue.
@@ -329,6 +470,4 @@ Lookup level defines how deep we will go in to beans:
 
 If you find a bug or issue, please create a ticket.
 For now no external contributions are allowed.
-
-
 
