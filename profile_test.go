@@ -59,7 +59,7 @@ func TestIfProfile(t *testing.T) {
 	require.NoError(t, err)
 	defer ctn.Close()
 
-	list := ctn.Bean(ProfileBeanClass, DefaultLevel)
+	list := ctn.Bean(ProfileBeanClass, DefaultSearchLevel)
 	require.Len(t, list, 1)
 }
 
@@ -79,6 +79,6 @@ func TestProfileBeanFiltering(t *testing.T) {
 	require.NoError(t, err)
 	defer ctn.Close()
 
-	list := ctn.Bean(ProfileBeanClass, DefaultLevel)
+	list := ctn.Bean(ProfileBeanClass, DefaultSearchLevel)
 	require.Len(t, list, 3)
 }
