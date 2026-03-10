@@ -87,7 +87,7 @@ func TestArrayByPointer(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(holderXClass, glue.DefaultLevel)
+	b := ctx.Bean(holderXClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 
 	holder := b[0].Object().(*holderX)
@@ -99,15 +99,15 @@ func TestArrayByPointer(t *testing.T) {
 	require.Equal(t, "b", holder.Array[1].name)
 	require.Equal(t, "c", holder.Array[2].name)
 
-	el := ctx.Lookup("a", glue.DefaultLevel)
+	el := ctx.Lookup("a", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "a", el[0].Object().(*elementX).BeanName())
 
-	el = ctx.Lookup("b", glue.DefaultLevel)
+	el = ctx.Lookup("b", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "b", el[0].Object().(*elementX).BeanName())
 
-	el = ctx.Lookup("c", glue.DefaultLevel)
+	el = ctx.Lookup("c", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "c", el[0].Object().(*elementX).BeanName())
 
@@ -125,7 +125,7 @@ func TestOrderedArrayByPointer(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(orderedHolderXClass, glue.DefaultLevel)
+	b := ctx.Bean(orderedHolderXClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 
 	holder := b[0].Object().(*orderedHolderX)
@@ -137,17 +137,17 @@ func TestOrderedArrayByPointer(t *testing.T) {
 	require.Equal(t, "b", holder.Array[1].name)
 	require.Equal(t, "c", holder.Array[2].name)
 
-	el := ctx.Lookup("a", glue.DefaultLevel)
+	el := ctx.Lookup("a", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "a", el[0].Object().(*orderedElementX).BeanName())
 	require.Equal(t, 0, el[0].Object().(*orderedElementX).BeanOrder())
 
-	el = ctx.Lookup("b", glue.DefaultLevel)
+	el = ctx.Lookup("b", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "b", el[0].Object().(*orderedElementX).BeanName())
 	require.Equal(t, 1, el[0].Object().(*orderedElementX).BeanOrder())
 
-	el = ctx.Lookup("c", glue.DefaultLevel)
+	el = ctx.Lookup("c", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "c", el[0].Object().(*orderedElementX).BeanName())
 	require.Equal(t, 2, el[0].Object().(*orderedElementX).BeanOrder())
@@ -165,7 +165,7 @@ func TestMapByPointer(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(holderMapClass, glue.DefaultLevel)
+	b := ctx.Bean(holderMapClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 
 	holder := b[0].Object().(*holderMap)
@@ -176,15 +176,15 @@ func TestMapByPointer(t *testing.T) {
 	require.Equal(t, "b", holder.Map["b"].BeanName())
 	require.Equal(t, "c", holder.Map["c"].BeanName())
 
-	el := ctx.Lookup("a", glue.DefaultLevel)
+	el := ctx.Lookup("a", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "a", el[0].Object().(*elementX).BeanName())
 
-	el = ctx.Lookup("b", glue.DefaultLevel)
+	el = ctx.Lookup("b", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "b", el[0].Object().(*elementX).BeanName())
 
-	el = ctx.Lookup("c", glue.DefaultLevel)
+	el = ctx.Lookup("c", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "c", el[0].Object().(*elementX).BeanName())
 
@@ -295,7 +295,7 @@ func TestArrayByInterface(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(HolderClass, glue.DefaultLevel)
+	b := ctx.Bean(HolderClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 	holder := b[0].Object().(Holder)
 
@@ -306,15 +306,15 @@ func TestArrayByInterface(t *testing.T) {
 	require.Equal(t, "b", holder.Elements()[1].BeanName())
 	require.Equal(t, "c", holder.Elements()[2].BeanName())
 
-	el := ctx.Lookup("a", glue.DefaultLevel)
+	el := ctx.Lookup("a", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "a", el[0].Object().(Element).BeanName())
 
-	el = ctx.Lookup("b", glue.DefaultLevel)
+	el = ctx.Lookup("b", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "b", el[0].Object().(Element).BeanName())
 
-	el = ctx.Lookup("c", glue.DefaultLevel)
+	el = ctx.Lookup("c", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "c", el[0].Object().(Element).BeanName())
 
@@ -331,7 +331,7 @@ func TestOrderedArrayByInterface(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(HolderClass, glue.DefaultLevel)
+	b := ctx.Bean(HolderClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 	holder := b[0].Object().(Holder)
 
@@ -342,15 +342,15 @@ func TestOrderedArrayByInterface(t *testing.T) {
 	require.Equal(t, "b", holder.Elements()[1].BeanName())
 	require.Equal(t, "c", holder.Elements()[2].BeanName())
 
-	el := ctx.Lookup("a", glue.DefaultLevel)
+	el := ctx.Lookup("a", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "a", el[0].Object().(Element).BeanName())
 
-	el = ctx.Lookup("b", glue.DefaultLevel)
+	el = ctx.Lookup("b", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "b", el[0].Object().(Element).BeanName())
 
-	el = ctx.Lookup("c", glue.DefaultLevel)
+	el = ctx.Lookup("c", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "c", el[0].Object().(Element).BeanName())
 
@@ -368,21 +368,21 @@ func TestMapByInterface(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(HolderClass, glue.DefaultLevel)
+	b := ctx.Bean(HolderClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 	holder := b[0].Object().(Holder)
 
 	require.Equal(t, 3, len(holder.Elements()))
 
-	el := ctx.Lookup("a", glue.DefaultLevel)
+	el := ctx.Lookup("a", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "a", el[0].Object().(Element).BeanName())
 
-	el = ctx.Lookup("b", glue.DefaultLevel)
+	el = ctx.Lookup("b", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "b", el[0].Object().(Element).BeanName())
 
-	el = ctx.Lookup("c", glue.DefaultLevel)
+	el = ctx.Lookup("c", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(el))
 	require.Equal(t, "c", el[0].Object().(Element).BeanName())
 
@@ -424,7 +424,7 @@ func TestArraySpecificByInterface(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(HolderClass, glue.DefaultLevel)
+	b := ctx.Bean(HolderClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 	holder := b[0].Object().(Holder)
 
@@ -457,7 +457,7 @@ func TestMapSpecificByInterface(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(HolderClass, glue.DefaultLevel)
+	b := ctx.Bean(HolderClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 	holder := b[0].Object().(Holder)
 

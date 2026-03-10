@@ -51,7 +51,7 @@ func TestBeanReload(t *testing.T) {
 	require.Equal(t, 0, reBean.destroyed)
 	require.True(t, tBean.ReloadableBean == reBean)
 
-	list := ctn.Bean(reloadableBeanClass, glue.DefaultLevel)
+	list := ctn.Bean(reloadableBeanClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(list))
 	require.Equal(t, reBean, list[0].Object())
 
@@ -110,7 +110,7 @@ func TestReload_PropertyReResolution(t *testing.T) {
 	require.Equal(t, "pg://old", b.URL)
 
 	// reload the bean
-	list := ctn.Bean(configBeanClass, glue.DefaultLevel)
+	list := ctn.Bean(configBeanClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(list))
 	err = ctn.Reload(list[0])
 	require.NoError(t, err)
@@ -134,7 +134,7 @@ func TestReloadWithContext_PropertyReResolution(t *testing.T) {
 	ctn.Properties().Set("app.name", "v2")
 
 	ctx := context.WithValue(context.Background(), contextKey("reload"), "yes")
-	list := ctn.Bean(reflect.TypeOf((*contextAwareConfigBean)(nil)), glue.DefaultLevel)
+	list := ctn.Bean(reflect.TypeOf((*contextAwareConfigBean)(nil)), glue.DefaultSearchLevel)
 	err = ctn.ReloadWithContext(ctx, list[0])
 	require.NoError(t, err)
 
@@ -166,7 +166,7 @@ func TestReload_DefaultUsedWhenPropertyRemoved(t *testing.T) {
 	// remove property — reload should fall back to default
 	ctn.Properties().Remove("db.url")
 
-	list := ctn.Bean(configBeanClass, glue.DefaultLevel)
+	list := ctn.Bean(configBeanClass, glue.DefaultSearchLevel)
 	err = ctn.Reload(list[0])
 	require.NoError(t, err)
 
@@ -182,7 +182,7 @@ func TestReload_InjectFieldsUntouched(t *testing.T) {
 
 	require.True(t, holder.Dep == dep, "should be same pointer")
 
-	list := ctn.Bean(reflect.TypeOf((*injectHolder)(nil)), glue.DefaultLevel)
+	list := ctn.Bean(reflect.TypeOf((*injectHolder)(nil)), glue.DefaultSearchLevel)
 	err = ctn.Reload(list[0])
 	require.NoError(t, err)
 

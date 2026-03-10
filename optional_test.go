@@ -29,7 +29,7 @@ func TestOptionalBeanByPointer(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(BeanBClass, glue.DefaultLevel)
+	b := ctx.Bean(BeanBClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 
 	require.Nil(t, b[0].Object().(*beanB).BeanA)
@@ -66,7 +66,7 @@ func TestOptionalBeanByInterface(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(BeanBServiceClass, glue.DefaultLevel)
+	b := ctx.Bean(BeanBServiceClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 
 	require.Nil(t, b[0].Object().(*beanBServiceImpl).BeanAService)

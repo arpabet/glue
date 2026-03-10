@@ -69,11 +69,11 @@ func TestPrimaryBeanInjection(t *testing.T) {
 
 	// Get all Service implementations
 	serviceType := reflect.TypeOf((*Service)(nil)).Elem()
-	beans := ctx.Bean(serviceType, glue.DefaultLevel)
+	beans := ctx.Bean(serviceType, glue.DefaultSearchLevel)
 	require.Equal(t, 3, len(beans))
 
 	// Find the consumer bean
-	//beans = ctx.Lookup("*glue_test.consumer", glue.DefaultLevel)
+	//beans = ctx.Lookup("*glue_test.consumer", glue.DefaultSearchLevel)
 	//require.Equal(t, 1, len(beans))
 
 	// Consumer should have the primary service injected
