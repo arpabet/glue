@@ -92,12 +92,7 @@ func (t *context) Parent() (Context, bool) {
 }
 
 func createContext(parent *context, properties Properties, scan []interface{}) (ctx *context, err error) {
-
-	prev := runtime.GOMAXPROCS(1)
-	defer func() {
-		runtime.GOMAXPROCS(prev)
-	}()
-
+	
 	core := make(map[reflect.Type][]*bean)
 	pointers := make(map[reflect.Type][]*injection)
 	interfaces := make(map[reflect.Type][]*injection)
