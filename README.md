@@ -155,6 +155,27 @@ func (t *component) BeanName() string {
 }
 ```
 
+Having this qualifier would inject correct bean
+```
+type component struct {
+Dependency  *anotherComponent  `inject:"qualifier=new_component"`
+}
+```
+
+Is similar to legacy `bean`
+```
+type component struct {
+Dependency  *anotherComponent  `inject:"bean=new_component"`
+}
+```
+
+And shortcut version
+```
+type component struct {
+Dependency  *anotherComponent  `inject:"new_component"`
+}
+```
+
 ### glue.OrderedBean
 
 For each bean that implements OrderedBean interface, Glue Framework invokes method BeanOrder() to determining position of the bean inside collection at the time of injection to another bean or in case of runtime lookup request. 
