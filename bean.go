@@ -6,7 +6,6 @@
 package glue
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -166,42 +165,6 @@ func (t *bean) FactoryBean() (Bean, bool) {
 	} else {
 		return nil, false
 	}
-}
-
-func (t *bean) Reload() error {
-	return t.ReloadWithContext(context.Background())
-}
-
-func (t *bean) ReloadWithContext(ctx context.Context) error {
-	t.ctorMu.Lock()
-	defer t.ctorMu.Unlock()
-
-	t.lifecycle = BeanDestroying
-	if dis, ok := t.obj.(ContextDisposableBean); ok {
-		if err := dis.Destroy(ctx); err != nil {
-			return err
-		}
-	} else if dis, ok := t.obj.(DisposableBean); ok {
-		if err := dis.Destroy(); err != nil {
-			return err
-		}
-	}
-	t.lifecycle = BeanConstructing
-	if t.beenFactory != nil {
-		return errors.Errorf("bean '%s' was created by factory bean '%v and can not be reloaded", t.name, t.beenFactory.factoryClassPtr)
-	} else {
-		if init, ok := t.obj.(ContextInitializingBean); ok {
-			if err := init.PostConstruct(ctx); err != nil {
-				return err
-			}
-		} else if init, ok := t.obj.(InitializingBean); ok {
-			if err := init.PostConstruct(); err != nil {
-				return err
-			}
-		}
-	}
-	t.lifecycle = BeanInitialized
-	return nil
 }
 
 func (t *bean) Lifecycle() BeanLifecycle {

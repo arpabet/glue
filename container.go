@@ -1078,6 +1078,64 @@ func (t *container) destroyBean(ctx context.Context, b *bean) (err error) {
 	return
 }
 
+func (t *container) Reload(b Bean) error {
+	return t.ReloadWithContext(context.Background(), b)
+}
+
+func (t *container) ReloadWithContext(ctx context.Context, b Bean) error {
+	bb, ok := b.(*bean)
+	if !ok {
+		return errors.Errorf("unsupported bean type %T", b)
+	}
+
+	bb.ctorMu.Lock()
+	defer bb.ctorMu.Unlock()
+
+	if bb.beenFactory != nil {
+		return errors.Errorf("bean '%s' was created by factory bean '%v' and can not be reloaded", bb.name, bb.beenFactory.factoryClassPtr)
+	}
+
+	// destroy
+	bb.lifecycle = BeanDestroying
+	if dis, ok := bb.obj.(ContextDisposableBean); ok {
+		if err := dis.Destroy(ctx); err != nil {
+			return err
+		}
+	} else if dis, ok := bb.obj.(DisposableBean); ok {
+		if err := dis.Destroy(); err != nil {
+			return err
+		}
+	}
+
+	// re-resolve static value: properties (skip dynamic — they already read live values)
+	bb.lifecycle = BeanConstructing
+	if len(bb.beanDef.properties) > 0 {
+		value := bb.valuePtr.Elem()
+		for _, propDef := range bb.beanDef.properties {
+			if propDef.dynamic {
+				continue
+			}
+			if err := propDef.inject(&value, t.properties); err != nil {
+				return errors.Errorf("reload property '%s' in bean '%s' failed, %v", propDef.propertyName, bb.name, err)
+			}
+		}
+	}
+
+	// post-construct
+	if init, ok := bb.obj.(ContextInitializingBean); ok {
+		if err := init.PostConstruct(ctx); err != nil {
+			return err
+		}
+	} else if init, ok := bb.obj.(InitializingBean); ok {
+		if err := init.PostConstruct(); err != nil {
+			return err
+		}
+	}
+
+	bb.lifecycle = BeanInitialized
+	return nil
+}
+
 func multipleErr(err []error) error {
 	switch len(err) {
 	case 0:

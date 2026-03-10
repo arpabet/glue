@@ -78,22 +78,6 @@ type Bean interface {
 	FactoryBean() (Bean, bool)
 
 	/*
-		Reload - Reinitialize bean by calling Destroy method if bean implements DisposableBean interface
-		and then calls PostConstruct method if bean implements InitializingBean interface
-
-		Reload can not be used for beans created by FactoryBean, since the instances are already injected
-	*/
-	Reload() error
-
-	/*
-		ReloadWithContext - Reinitialize bean by calling Destroy method if bean implements ContextDisposableBean interface
-		and then calls PostConstruct method if bean implements ContextInitializingBean interface with provided context
-
-		ReloadWithContext can not be used for beans created by FactoryBean, since the instances are already injected
-	*/
-	ReloadWithContext(ctx context.Context) error
-
-	/*
 		Returns current bean lifecycle
 	*/
 	Lifecycle() BeanLifecycle
@@ -140,6 +124,20 @@ type Container interface {
 		CloseWithContext - Destroy all beans that implement interface DisposableBean with context
 	*/
 	CloseWithContext(ctx context.Context) error
+
+	/*
+		Reload - Re-resolve static value properties and reinitialize bean by calling
+		Destroy then PostConstruct. Dynamic func() properties are not affected since
+		they already read live values. Inject fields are not re-resolved.
+
+		Can not be used for beans created by FactoryBean.
+	*/
+	Reload(bean Bean) error
+
+	/*
+		ReloadWithContext - same as Reload but with provided context for context-aware lifecycle interfaces
+	*/
+	ReloadWithContext(ctx context.Context, bean Bean) error
 
 	/*
 		Core - Get list of all registered instances on creation of container with scope 'core'
