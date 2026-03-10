@@ -814,6 +814,12 @@ func forEachRecursive(active map[string]struct{}, initialPos string, scan []inte
 			}
 		}
 
+		if conditionalBean, ok := item.(ConditionalBean); ok {
+			if !conditionalBean.ShouldRegisterBean() {
+				continue
+			}
+		}
+
 		var pos string
 		if len(initialPos) > 0 {
 			pos = fmt.Sprintf("%s.%d", initialPos, j)

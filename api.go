@@ -246,6 +246,25 @@ type Container interface {
 	String() string
 }
 
+var ConditionalBeanClass = reflect.TypeOf((*ConditionalBean)(nil)).Elem()
+
+/*
+ConditionalBean is optionally implemented by beans. If Condition() returns false,
+
+	the bean is not registered in the context.
+
+	ProfileBean is checked first (cheap string match), then ConditionalBean
+	(may do I/O or complex logic). Both can be implemented on the same bean.
+*/
+type ConditionalBean interface {
+
+	/*
+	   ShouldRegisterBean returns true if this bean should be registered
+	   in the container. Called during scanning, before injection an initialization in PostConstruct.
+	*/
+	ShouldRegisterBean() bool
+}
+
 var ProfileBeanClass = reflect.TypeOf((*ProfileBean)(nil)).Elem()
 
 /*
