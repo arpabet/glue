@@ -78,12 +78,20 @@ type Bean interface {
 	FactoryBean() (Bean, bool)
 
 	/*
-		Re-initialize bean by calling Destroy method if bean implements DisposableBean interface
+		Reload - Reinitialize bean by calling Destroy method if bean implements DisposableBean interface
 		and then calls PostConstruct method if bean implements InitializingBean interface
 
 		Reload can not be used for beans created by FactoryBean, since the instances are already injected
 	*/
 	Reload() error
+
+	/*
+		ReloadWithContext - Reinitialize bean by calling Destroy method if bean implements ContextDisposableBean interface
+		and then calls PostConstruct method if bean implements ContextInitializingBean interface with provided context
+
+		ReloadWithContext can not be used for beans created by FactoryBean, since the instances are already injected
+	*/
+	ReloadWithContext(ctx context.Context) error
 
 	/*
 		Returns current bean lifecycle
