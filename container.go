@@ -118,25 +118,36 @@ func buildContainerOptions(options []ContainerOption) ContainerOptions {
 }
 
 func (t *container) Extend(scan ...interface{}) (Container, error) {
-
-	properties := NewProperties()
-	properties.Extend(t.properties)
-
-	return createContainer(t, ContainerOptions{
-		Context:    context.Background(),
-		Properties: properties,
-	}, scan)
+	return t.ExtendWithOptions(nil, scan...)
 }
 
 func (t *container) ExtendWithContext(ctx context.Context, scan ...interface{}) (Container, error) {
+	return t.ExtendWithOptions([]ContainerOption{WithContext(ctx)}, scan...)
+}
+
+func (t *container) ExtendWithOptions(options []ContainerOption, scan ...interface{}) (Container, error) {
 
 	properties := NewProperties()
 	properties.Extend(t.properties)
 
-	return createContainer(t, ContainerOptions{
-		Context:    ctx,
-		Properties: properties,
-	}, scan)
+	opts := buildContainerOptions(options)
+	overrideProperties := false
+	for _, opt := range options {
+		if opt == nil {
+			continue
+		}
+		probe := ContainerOptions{}
+		opt(&probe)
+		if probe.Properties != nil {
+			overrideProperties = true
+			break
+		}
+	}
+	if !overrideProperties {
+		opts.Properties = properties
+	}
+
+	return createContainer(t, opts, scan)
 }
 
 func (t *container) Parent() (Container, bool) {

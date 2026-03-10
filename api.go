@@ -144,6 +144,11 @@ type Container interface {
 	ExtendWithContext(ctx context.Context, scan ...interface{}) (Container, error)
 
 	/*
+		ExtendWithOptions - creates a new container on top of beans from the current container with options
+	*/
+	ExtendWithOptions(options []ContainerOption, scan ...interface{}) (Container, error)
+
+	/*
 		Children - Returns list of ctx container inside the current container only
 	*/
 	Children() []ChildContainer
