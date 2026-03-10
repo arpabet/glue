@@ -6,11 +6,12 @@
 package glue_test
 
 import (
-	"github.com/stretchr/testify/require"
-	"go.arpabet.com/glue"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 )
 
 var FirstBeanClass = reflect.TypeOf((*firstBean)(nil)) // *firstBean
@@ -110,6 +111,14 @@ func (t *firstServiceImpl) First() {
 	require.True(t.testing, true)
 }
 
+type anotherFirstServiceImpl struct {
+	testing *testing.T
+}
+
+func (t *anotherFirstServiceImpl) First() {
+	require.True(t.testing, true)
+}
+
 type secondServiceImpl struct {
 	FirstService FirstService `inject:""`
 	testing      *testing.T
@@ -146,19 +155,11 @@ func TestBeanByInterface(t *testing.T) {
 
 }
 
-type firstService2Impl struct {
-	testing *testing.T
-}
-
-func (t *firstService2Impl) First() {
-	require.True(t.testing, true)
-}
-
 func TestMultipleBeansByInterface(t *testing.T) {
 
 	ctx, err := glue.New(
 		&firstServiceImpl{testing: t},
-		&firstService2Impl{testing: t},
+		&firstServiceImpl{testing: t},
 
 		&struct {
 			FirstService FirstService `inject:"-"`
@@ -176,7 +177,7 @@ func TestSpecificBeanByInterface(t *testing.T) {
 
 	ctx, err := glue.New(
 		&firstServiceImpl{testing: t},
-		&firstService2Impl{testing: t},
+		&anotherFirstServiceImpl{testing: t},
 
 		&struct {
 			FirstService FirstService `inject:"bean=*glue_test.firstServiceImpl"`
@@ -197,7 +198,7 @@ func TestNotFoundSpecificBeanByInterface(t *testing.T) {
 
 	ctx, err := glue.New(
 		&firstServiceImpl{testing: t},
-		&firstService2Impl{testing: t},
+		&anotherFirstServiceImpl{testing: t},
 
 		&struct {
 			FirstService FirstService `inject:"bean=*glue_test.unknownBean"`
@@ -208,5 +209,47 @@ func TestNotFoundSpecificBeanByInterface(t *testing.T) {
 	require.Nil(t, ctx)
 	println(err.Error())
 	require.True(t, strings.Contains(err.Error(), "can not find candidates"))
+
+}
+
+func TestQualifierAliasForBean(t *testing.T) {
+
+	ctx, err := glue.New(
+		&firstServiceImpl{testing: t},
+		&anotherFirstServiceImpl{testing: t},
+
+		&struct {
+			FirstService FirstService `inject:"qualifier=*glue_test.firstServiceImpl"`
+		}{},
+	)
+
+	require.NoError(t, err)
+	defer ctx.Close()
+
+	firstService := ctx.Bean(FirstServiceClass, glue.DefaultLevel)
+	require.Equal(t, 2, len(firstService))
+
+	firstService[0].Object().(FirstService).First()
+
+}
+
+func TestShorthandQualifier(t *testing.T) {
+
+	ctx, err := glue.New(
+		&firstServiceImpl{testing: t},
+		&anotherFirstServiceImpl{testing: t},
+
+		&struct {
+			FirstService FirstService `inject:"*glue_test.firstServiceImpl"`
+		}{},
+	)
+
+	require.NoError(t, err)
+	defer ctx.Close()
+
+	firstService := ctx.Bean(FirstServiceClass, glue.DefaultLevel)
+	require.Equal(t, 2, len(firstService))
+
+	firstService[0].Object().(FirstService).First()
 
 }

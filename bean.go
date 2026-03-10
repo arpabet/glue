@@ -398,7 +398,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 					p := strings.TrimSpace(pair)
 					kv := strings.SplitN(p, "=", 2)
 					switch strings.TrimSpace(kv[0]) {
-					case "bean":
+					case "bean", "qualifier":
 						if len(kv) > 1 {
 							qualifier = strings.TrimSpace(kv[1])
 						}
@@ -409,6 +409,11 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 					case "level":
 						if len(kv) > 1 {
 							level, _ = strconv.Atoi(kv[1])
+						}
+					default:
+						// shorthand: bare name (no "=") treated as qualifier; "-" is the no-op marker
+						if len(kv) == 1 && p != "" && p != "-" {
+							qualifier = p
 						}
 					}
 				}
