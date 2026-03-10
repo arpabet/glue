@@ -572,15 +572,27 @@ parent.Close()
 
 ### Level
 
-After extending container, we can end up with hierarchy of containers, therefore we need levels in API to understand how deep we need to retrieve beans from parent containers.
+After extending container, we can end up with hierarchy of containers, therefore we need search levels in API to understand how deep we need to retrieve beans from parent containers.
 
-Lookup level defines how deep we will go in to beans:
-* level 0: look in the current container, if not found then look in the parent container and so on (default)
-* level 1: look only in the current container
-* level 2: look in the current container in union with the parent container
-* level 3: look in union of current, parent, parent of parent containers
-* and so on.
-* level -1: look in union of all containers.
+Recommended constants:
+```
+const (
+    DefaultSearchLevel         = SearchFallback
+    SearchFallback             = 0  // current, otherwise nearest parent match
+    SearchCurrent              = 1  // current only
+    SearchCurrentAndParent     = 2  // current + direct parent
+    SearchCurrentAndTwoParents = 3  // current + parent + grandparent
+    SearchCurrentAndAllParents = -1 // all visible ancestors
+)
+```
+
+Search level semantics:
+* `SearchFallback` (`0`): look in the current container, if not found then look in the nearest parent container and so on. This is the default behavior.
+* `SearchCurrent` (`1`): look only in the current container.
+* `SearchCurrentAndParent` (`2`): look in the current container together with the direct parent container.
+* `SearchCurrentAndTwoParents` (`3`): look in the current container together with parent and grandparent containers.
+* Higher positive numbers continue the same pattern.
+* `SearchCurrentAndAllParents` (`-1`): look in union of all visible parent containers.
 
 ### Contributions
 
