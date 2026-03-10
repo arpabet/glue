@@ -6,6 +6,7 @@
 package glue_test
 
 import (
+	"context"
 	"github.com/stretchr/testify/require"
 	"go.arpabet.com/glue"
 	"reflect"
@@ -233,4 +234,39 @@ func TestFactoryInterfaceBean(t *testing.T) {
 
 	err = bc[0].Object().(BeanConstructed).Run()
 	require.NoError(t, err)
+}
+
+type contextFactoryBeanExample struct {
+	received context.Context
+}
+
+func (t *contextFactoryBeanExample) Object(ctx context.Context) (interface{}, error) {
+	t.received = ctx
+	return &beanConstructed{}, nil
+}
+
+func (t *contextFactoryBeanExample) ObjectType() reflect.Type {
+	return beanConstructedClass
+}
+
+func (t *contextFactoryBeanExample) ObjectName() string {
+	return ""
+}
+
+func (t *contextFactoryBeanExample) Singleton() bool {
+	return true
+}
+
+func TestContextFactoryBean(t *testing.T) {
+	f := &contextFactoryBeanExample{}
+	ctx := context.WithValue(context.Background(), "factory-test", "ctx-value")
+
+	ctn, err := glue.NewWithContext(ctx, f)
+	require.NoError(t, err)
+	defer ctn.Close()
+
+	b := ctn.Bean(beanConstructedClass, glue.DefaultSearchLevel)
+	require.Equal(t, 1, len(b))
+	require.Same(t, ctx, f.received)
+	require.Equal(t, "ctx-value", f.received.Value("factory-test"))
 }

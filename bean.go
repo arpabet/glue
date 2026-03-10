@@ -6,6 +6,7 @@
 package glue
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -130,7 +131,7 @@ func (t beanlist) String() string {
 func (t *bean) String() string {
 	pointer := uintptr(unsafe.Pointer(&t.obj))
 	if t.beenFactory != nil {
-		objectName := t.beenFactory.factoryBean.ObjectName()
+		objectName := t.beenFactory.objectName()
 		if objectName != "" {
 			return fmt.Sprintf("<FactoryBean %s->%s(%s)>(%x)", t.beenFactory.factoryClassPtr, t.beanDef.classPtr, objectName, pointer)
 		} else {
@@ -199,9 +200,14 @@ type factory struct {
 	factoryClassPtr reflect.Type
 
 	/**
-	Factory bean interface
+		Factory bean interface
 	*/
 	factoryBean FactoryBean
+
+	/**
+		Context-aware factory bean interface
+	*/
+	contextFactoryBean ContextFactoryBean
 
 	/**
 	Created bean instances by this factory
@@ -213,7 +219,28 @@ func (t *factory) String() string {
 	return t.factoryClassPtr.String()
 }
 
-func (t *factory) ctor() (*bean, bool, error) {
+func (t *factory) objectType() reflect.Type {
+	if t.contextFactoryBean != nil {
+		return t.contextFactoryBean.ObjectType()
+	}
+	return t.factoryBean.ObjectType()
+}
+
+func (t *factory) objectName() string {
+	if t.contextFactoryBean != nil {
+		return t.contextFactoryBean.ObjectName()
+	}
+	return t.factoryBean.ObjectName()
+}
+
+func (t *factory) singleton() bool {
+	if t.contextFactoryBean != nil {
+		return t.contextFactoryBean.Singleton()
+	}
+	return t.factoryBean.Singleton()
+}
+
+func (t *factory) ctor(ctx context.Context) (*bean, bool, error) {
 	var b *bean
 	var singleton bool
 
@@ -221,7 +248,7 @@ func (t *factory) ctor() (*bean, bool, error) {
 		return nil, false, errors.Errorf("internal: element bean collection is empty for factory '%v'", t.factoryClassPtr)
 	}
 
-	if t.factoryBean.Singleton() {
+	if t.singleton() {
 		if t.instances[0].obj == nil {
 			b = t.instances[0]
 			singleton = true
@@ -242,9 +269,17 @@ func (t *factory) ctor() (*bean, bool, error) {
 		}
 	}
 
-	obj, err := t.factoryBean.Object()
+	var (
+		obj interface{}
+		err error
+	)
+	if contextFactoryBean, ok := t.factoryObj.(ContextFactoryBean); ok {
+		obj, err = contextFactoryBean.Object(ctx)
+	} else {
+		obj, err = t.factoryBean.Object()
+	}
 	if err != nil {
-		return nil, false, errors.Errorf("factory bean '%v' failed to create bean '%v', %v", t.factoryClassPtr, t.factoryBean.ObjectType(), err)
+		return nil, false, errors.Errorf("factory bean '%v' failed to create bean '%v', %v", t.factoryClassPtr, t.objectType(), err)
 	}
 
 	b.obj = obj

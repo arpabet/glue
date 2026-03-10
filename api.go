@@ -408,6 +408,31 @@ type FactoryBean interface {
 	Singleton() bool
 }
 
+var ContextFactoryBeanClass = reflect.TypeOf((*ContextFactoryBean)(nil)).Elem()
+
+type ContextFactoryBean interface {
+
+	/*
+		returns an object produced by the factory using the current container construction context
+	*/
+	Object(ctx context.Context) (interface{}, error)
+
+	/*
+		returns the type of object that this FactoryBean produces
+	*/
+	ObjectType() reflect.Type
+
+	/*
+		returns the bean name of object that this FactoryBean produces or empty string if name not defined
+	*/
+	ObjectName() string
+
+	/*
+		denotes if the object produced by this FactoryBean is a singleton
+	*/
+	Singleton() bool
+}
+
 var InitializingBeanClass = reflect.TypeOf((*InitializingBean)(nil)).Elem()
 
 /*

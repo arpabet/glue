@@ -318,19 +318,29 @@ func createContainer(parent *container, options ContainerOptions, scan []interfa
 
 			var elemClassPtr reflect.Type
 			factoryBean, isFactoryBean := obj.(FactoryBean)
-			if isFactoryBean {
+			contextFactoryBean, isContextFactoryBean := obj.(ContextFactoryBean)
+			if isContextFactoryBean {
+				elemClassPtr = contextFactoryBean.ObjectType()
+			} else if isFactoryBean {
 				elemClassPtr = factoryBean.ObjectType()
 			}
 
 			if verbose != nil {
-				if isFactoryBean {
+				if isFactoryBean || isContextFactoryBean {
 					var info string
-					if factoryBean.Singleton() {
+					if (isContextFactoryBean && contextFactoryBean.Singleton()) || (!isContextFactoryBean && factoryBean.Singleton()) {
 						info = "singleton"
 					} else {
 						info = "non-singleton"
 					}
-					objectName := factoryBean.ObjectName()
+					objectName := elemClassPtr.String()
+					if isContextFactoryBean {
+						if name := contextFactoryBean.ObjectName(); name != "" {
+							objectName = name
+						}
+					} else if name := factoryBean.ObjectName(); name != "" {
+						objectName = name
+					}
 					if objectName != "" {
 						verbose.Printf("FactoryBean %v produce %s %v with name '%s'\n", classPtr, info, elemClassPtr, objectName)
 					} else {
@@ -345,7 +355,7 @@ func createContainer(parent *container, options ContainerOptions, scan []interfa
 				}
 			}
 
-			if isFactoryBean {
+			if isFactoryBean || isContextFactoryBean {
 				elemClassKind := elemClassPtr.Kind()
 				if elemClassKind != reflect.Ptr && elemClassKind != reflect.Interface {
 					return errors.Errorf("factory bean '%v' on position '%s' can produce ptr or interface, but object type is '%v'", classPtr, pos, elemClassPtr)
@@ -399,14 +409,15 @@ func createContainer(parent *container, options ContainerOptions, scan []interfa
 			/*
 				Register factory if needed
 			*/
-			if isFactoryBean {
+			if isFactoryBean || isContextFactoryBean {
 				f := &factory{
-					bean:            objBean,
-					factoryObj:      obj,
-					factoryClassPtr: classPtr,
-					factoryBean:     factoryBean,
+					bean:               objBean,
+					factoryObj:         obj,
+					factoryClassPtr:    classPtr,
+					factoryBean:        factoryBean,
+					contextFactoryBean: contextFactoryBean,
 				}
-				objectName := factoryBean.ObjectName()
+				objectName := f.objectName()
 				if objectName == "" {
 					objectName = elemClassPtr.String()
 				}
@@ -1062,7 +1073,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		if verbose != nil {
 			verbose.Printf("%sFactoryDep (%v).Object()\n", indent(len(stack)+1), factoryDep.factory.factoryClassPtr)
 		}
-		bean, created, err := factoryDep.factory.ctor()
+		bean, created, err := factoryDep.factory.ctor(ctx)
 		if err != nil {
 			return errors.Errorf("factory ctor '%v' failed, %v", factoryDep.factory.factoryClassPtr, err)
 		}
@@ -1070,7 +1081,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 			if verbose != nil {
 				verbose.Printf("%sDep Created Bean %s with type '%v'\n", indent(len(stack)+1), bean.name, bean.beanDef.classPtr)
 			}
-			t.registry.addBean(factoryDep.factory.factoryBean.ObjectType(), bean)
+			t.registry.addBean(factoryDep.factory.objectType(), bean)
 		}
 		err = factoryDep.injection(bean)
 		if err != nil {
@@ -1091,7 +1102,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		if verbose != nil {
 			verbose.Printf("%s(%v).Object()\n", indent(len(stack)), bean.beenFactory.factoryClassPtr)
 		}
-		_, _, err := bean.beenFactory.ctor() // always new
+		_, _, err := bean.beenFactory.ctor(ctx) // always new
 		if err != nil {
 			return errors.Errorf("factory ctor '%v' failed, %v", bean.beenFactory.factoryClassPtr, err)
 		}
