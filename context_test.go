@@ -8,8 +8,6 @@ package glue_test
 import (
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"go.arpabet.com/glue"
 	"log"
 	"os"
 	"reflect"
@@ -17,6 +15,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 )
 
 func TestCreateNil(t *testing.T) {
@@ -48,7 +49,7 @@ func TestCreateEmpty(t *testing.T) {
 
 	require.Equal(t, 2, len(ctx.Core()))
 
-	c := ctx.Bean(glue.ContextClass, glue.DefaultLevel)
+	c := ctx.Bean(glue.ContainerClass, glue.DefaultLevel)
 	require.Equal(t, 1, len(c))
 	require.Equal(t, ctx, c[0].Object())
 
@@ -80,7 +81,7 @@ type UserService interface {
 var AppServiceClass = reflect.TypeOf((*AppService)(nil)).Elem()
 
 type AppService interface {
-	GetContext() glue.Context
+	GetContainer() glue.Container
 }
 
 type storageImpl struct {
@@ -154,17 +155,17 @@ func (t *userServiceImpl) PostConstruct() error {
 }
 
 type appServiceImpl struct {
-	Context glue.Context `inject:""`
+	Context glue.Container `inject:""`
 }
 
-func (t *appServiceImpl) GetContext() glue.Context {
+func (t *appServiceImpl) GetContainer() glue.Container {
 	return t.Context
 }
 
 func TestCreateEmptyObject(t *testing.T) {
 
 	ctx, err := glue.New(
-		&storageImpl{}, // requires log, but we forgot to add it to this context
+		&storageImpl{}, // requires log, but we forgot to add it to this container
 		/**
 		  needed to define usage of interfaces
 		*/
@@ -213,7 +214,7 @@ func TestCreate(t *testing.T) {
 		&userServiceImpl{},
 		&appServiceImpl{},
 		/**
-		  needed to define usage of UserService in context in order to register bean name with this interface name
+		  needed to define usage of UserService in container in order to register bean name with this interface name
 		*/
 		&struct {
 			UserService UserService `inject:""`
@@ -253,7 +254,7 @@ func TestCreate(t *testing.T) {
 	require.Equal(t, 1, len(list))
 	appServiceInstance := list[0].Object().(*appServiceImpl)
 	require.NotNil(t, appServiceInstance)
-	require.Equal(t, ctx, appServiceInstance.GetContext())
+	require.Equal(t, ctx, appServiceInstance.GetContainer())
 	require.Equal(t, appServiceInstance, ctx.Bean(AppServiceClass, glue.DefaultLevel)[0].Object())
 
 }

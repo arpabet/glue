@@ -25,11 +25,11 @@ type dynService struct {
 	// func() (T, error) — returns error if missing and no default
 	GetSecret func() (string, error) `value:"db.password"`
 
-	// func(context.Context) (T, error) — context-aware variant
+	// func(context.Context) (T, error) — container-aware variant
 	GetConn func(context.Context) (string, error) `value:"db.conn,default=mem://"`
 }
 
-func newDynContext(t *testing.T, props map[string]interface{}) (glue.Context, *dynService) {
+func newDynContext(t *testing.T, props map[string]interface{}) (glue.Container, *dynService) {
 	t.Helper()
 	svc := &dynService{}
 	ctx, err := glue.New(
@@ -98,7 +98,7 @@ func TestDynamicProperty_InvalidFunc_WithParams(t *testing.T) {
 	}
 	_, err := glue.New(&bad{})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "context.Context")
+	require.Contains(t, err.Error(), "container.Container")
 }
 
 func TestDynamicProperty_InvalidFunc_BadSecondReturn(t *testing.T) {

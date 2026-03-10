@@ -7,17 +7,17 @@ package glue
 
 import "log"
 
-/**
+/*
+*
 Verbose logs if not nil
 */
 var verbose *log.Logger
 
 /**
-Use this function operate verbose and logging level during context creation.
+Use this function operate verbose and logging level during container creation.
 */
 
 func Verbose(log *log.Logger) (prev *log.Logger) {
 	prev, verbose = verbose, log
 	return
 }
-

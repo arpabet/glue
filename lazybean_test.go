@@ -42,7 +42,7 @@ func (t *unoServiceImpl) Initialized() bool {
 	return t.initialized
 }
 
-// when this method called, Context is in initialization stage, so lazy bean can be not initialized
+// when this method called, Container is in initialization stage, so lazy bean can be not initialized
 func (t *unoServiceImpl) PostConstruct() error {
 	// not yet initialized, lazy field can not be nil (this is not optional field that can be nil),
 	// but DosService not initialized, because DosService depends on UnoService
@@ -53,7 +53,7 @@ func (t *unoServiceImpl) PostConstruct() error {
 	return nil
 }
 
-// when this method called, Context already created, all beans must be initialized
+// when this method called, Container already created, all beans must be initialized
 func (t *unoServiceImpl) Uno() {
 	require.NotNil(t.testing, t.DosService)
 	println("Uno: DosService initialized=", t.DosService.Initialized())
@@ -84,7 +84,7 @@ func (t *dosServiceImpl) Initialized() bool {
 	return t.initialized
 }
 
-// when this method called, Context already created, all beans must be initialized
+// when this method called, Container already created, all beans must be initialized
 func (t *dosServiceImpl) Dos() {
 	require.NotNil(t.testing, t.UnoService)
 	println("Dos: UnoService initialized=", t.UnoService.Initialized())
@@ -127,7 +127,7 @@ type zeroService struct {
 	Initialized bool
 }
 
-// when this method called, Context is in initialization stage, so lazy bean can be not initialized
+// when this method called, Container is in initialization stage, so lazy bean can be not initialized
 func (t *zeroService) PostConstruct() error {
 	// not yet initialized, lazy field can not be nil (this is not optional field that can be nil),
 	// but unService is not initialized, because zeroService depends on unService
@@ -137,7 +137,7 @@ func (t *zeroService) PostConstruct() error {
 	return nil
 }
 
-// when this method called, Context already created, all beans must be initialized
+// when this method called, Container already created, all beans must be initialized
 func (t *zeroService) Zero() {
 	require.NotNil(t.testing, t.UnService)
 	println("Zero")
@@ -161,7 +161,7 @@ func (t *unService) PostConstruct() error {
 	return nil
 }
 
-// when this method called, Context already created, all beans must be initialized
+// when this method called, Container already created, all beans must be initialized
 func (t *unService) Un() {
 	require.NotNil(t.testing, t.ZeroService)
 	println("Un")

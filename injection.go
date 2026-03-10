@@ -6,7 +6,7 @@
 package glue
 
 import (
-	goctx "context"
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -69,9 +69,9 @@ type injectionDef struct {
 	/*
 		Level of how deep we need to search beans for injection
 
-		level 0: look in the current context, if not found then look in the parent context and so on (default)
-		level 1: look only in the current context
-		level 2: look in the current context in union with the parent context
+		level 0: look in the current container, if not found then look in the parent container and so on (default)
+		level 1: look only in the current container
+		level 2: look in the current container in union with the parent container
 		level 3: look in union of current, parent, parent of parent contexts
 		and so on.
 		level -1: look in union of all contexts.
@@ -162,7 +162,7 @@ type propInjectionDef struct {
 
 var (
 	errorType   = reflect.TypeOf((*error)(nil)).Elem()
-	contextType = reflect.TypeOf((*goctx.Context)(nil)).Elem()
+	contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
 )
 
 /*
@@ -565,7 +565,7 @@ func (t *propInjectionDef) injectDynamic(field reflect.Value, properties Propert
 
 	switch {
 	case t.funcTakesContext:
-		// func(context.Context) (T, error)
+		// func(container.Container) (T, error)
 		fn = reflect.MakeFunc(t.fieldType, func(args []reflect.Value) []reflect.Value {
 			str, ok := resolve()
 			if !ok {

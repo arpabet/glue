@@ -11,8 +11,8 @@ All injectable fields must have tag `inject` and be public.
 ### Usage
 
 Dependency Injection framework for complex applications written in Golang.
-There is no capability to scan components in packages provided by Golang language itself, therefore the context creation needs to see all beans as memory allocated instances by pointers.
-The best practices are to inject beans by interfaces between each other, but create context of their implementations.
+There is no capability to scan components in packages provided by Golang language itself, therefore the container creation needs to see all beans as memory allocated instances by pointers.
+The best practices are to inject beans by interfaces between each other, but create container of their implementations.
 
 Example:
 ```
@@ -34,7 +34,7 @@ Glue Framework does not support anonymous injection fields.
 Wrong:
 ```
 type wrong struct {
-    UserService `inject:""`  // since the *wrong structure also implements UserService interface it can lead to cycle and wrong injections in context
+    UserService `inject:""`  // since the *wrong structure also implements UserService interface it can lead to cycle and wrong injections in container
 }
 ```
 
@@ -125,7 +125,7 @@ func (t *component) PostConstruct() error {
 
 ### glue.DisposableBean
 
-For each bean that implements DisposableBean interface, Glue Framework invokes Destroy() method at the time of closing context in reverse order of how beans were initialized.
+For each bean that implements DisposableBean interface, Glue Framework invokes Destroy() method at the time of closing container in reverse order of how beans were initialized.
 
 Example:
 ```
@@ -142,7 +142,7 @@ func (t *component) Destroy() error {
 ### glue.NamedBean
 
 For each bean that implements NamedBean interface, Glue Framework will use a returned bean name by calling function BeanName() instead of class name of the bean.
-Together with qualifier this gives ability to select that bean particular to inject to the application context. 
+Together with qualifier this gives ability to select that bean particular to inject to the application container. 
 
 Example:
 ```
@@ -270,7 +270,7 @@ type component struct {
 }
 ```
 
-Suppose we do not have anotherComponent in context, but would like our context to be created anyway, that is good for libraries.
+Suppose we do not have anotherComponent in container, but would like our container to be created anyway, that is good for libraries.
 In this case there is a high risk of having null-pointer panic during runtime, therefore for optional dependency
 fields you need always check if it is not nil before use.
 
@@ -282,7 +282,7 @@ if t.Dependency != nil {
 
 ### Extend
 
-Glue Framework has method Extend to create inherited contexts whereas parent sees only own beans, extended context sees parent and own glue.
+Glue Framework has method Extend to create inherited container whereas parent sees only own beans, extended container sees parent and own glue.
 The level of lookup determines the logic how deep we search beans in parent hierarchy. 
 
 Example:
@@ -304,26 +304,26 @@ len(child.Lookup("package_name.a", 0)) == 1
 len(child.Lookup("package_name.b", 0)) == 1
 ```
 
-If we destroy child context, parent context still be alive.
+If we destroy child container, parent container still be alive.
 
 Example:
 ```
 child.Close()
-// Extend method does not transfer ownership of beans from parent to child context, you would need to close parent context separatelly, after child
+// Extend method does not transfer ownership of beans from parent to child container, you would need to close parent container separatelly, after child
 parent.Close()
 ```
 
 ### Level
 
-After extending context, we can end up with hierarchy of contexts, therefore we need levels in API to understand how deep we need to retrieve beans from parent contexts.
+After extending container, we can end up with hierarchy of containers, therefore we need levels in API to understand how deep we need to retrieve beans from parent containers.
 
 Lookup level defines how deep we will go in to beans:
-* level 0: look in the current context, if not found then look in the parent context and so on (default)
-* level 1: look only in the current context
-* level 2: look in the current context in union with the parent context
-* level 3: look in union of current, parent, parent of parent contexts
+* level 0: look in the current container, if not found then look in the parent container and so on (default)
+* level 1: look only in the current container
+* level 2: look in the current container in union with the parent container
+* level 3: look in union of current, parent, parent of parent containers
 * and so on.
-* level -1: look in union of all contexts.
+* level -1: look in union of all containers.
 
 ### Contributions
 

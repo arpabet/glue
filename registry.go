@@ -13,24 +13,24 @@ import (
 )
 
 /**
-	Holds runtime information about all beans visible from current context including all parents.
- */
+Holds runtime information about all beans visible from current container including all parents.
+*/
 
 type registry struct {
 	sync.RWMutex
-	beansByName map[string][]*bean
-	beansByType map[reflect.Type][]*bean
+	beansByName     map[string][]*bean
+	beansByType     map[reflect.Type][]*bean
 	resourceSources map[string]*resourceSource
 }
 
 type resourceSource struct {
-	names []string
+	names     []string
 	resources map[string]Resource
 }
 
 // immutable object
 type resource struct {
-	name string
+	name   string
 	source http.FileSystem
 }
 
@@ -44,7 +44,7 @@ func newResourceSource(source *ResourceSource) *resourceSource {
 		resources: make(map[string]Resource),
 	}
 	for _, name := range source.AssetNames {
-		t.resources[name] = resource{ name: name, source: source.AssetFiles }
+		t.resources[name] = resource{name: name, source: source.AssetFiles}
 	}
 	return t
 }
@@ -52,9 +52,9 @@ func newResourceSource(source *ResourceSource) *resourceSource {
 func (t *resourceSource) merge(other *ResourceSource) error {
 	for _, name := range other.AssetNames {
 		if _, ok := t.resources[name]; ok {
-			return errors.Errorf("resource '%s' already exist in context for resource source '%s'", name, other.Name)
+			return errors.Errorf("resource '%s' already exist in container for resource source '%s'", name, other.Name)
 		}
-		t.resources[name] = resource{ name: name, source: other.AssetFiles }
+		t.resources[name] = resource{name: name, source: other.AssetFiles}
 	}
 	return nil
 }

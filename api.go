@@ -91,23 +91,23 @@ type Bean interface {
 	String() string
 }
 
-var ContextClass = reflect.TypeOf((*Context)(nil)).Elem()
+var ContainerClass = reflect.TypeOf((*Container)(nil)).Elem()
 
-type Context interface {
+type Container interface {
 	/*
-		Gets parent context if exist
+		Gets parent container if exist
 	*/
-	Parent() (Context, bool)
-
-	/*
-		New new context with additional beans based on current one
-	*/
-	Extend(scan ...interface{}) (Context, error)
+	Parent() (Container, bool)
 
 	/*
-		Returns list of ctx context inside the current context only
+		New new container with additional beans based on current one
 	*/
-	Children() []ChildContext
+	Extend(scan ...interface{}) (Container, error)
+
+	/*
+		Returns list of ctx container inside the current container only
+	*/
+	Children() []ChildContainer
 
 	/*
 		Destroy all beans that implement interface DisposableBean.
@@ -115,7 +115,7 @@ type Context interface {
 	Close() error
 
 	/*
-		Get list of all registered instances on creation of context with scope 'core'
+		Get list of all registered instances on creation of container with scope 'core'
 	*/
 	Core() []reflect.Type
 
@@ -131,9 +131,9 @@ type Context interface {
 
 		Lookup level defines how deep we will go in to beans:
 
-		level 0: look in the current context, if not found then look in the parent context and so on (default)
-		level 1: look only in the current context
-		level 2: look in the current context in union with the parent context
+		level 0: look in the current container, if not found then look in the parent container and so on (default)
+		level 1: look only in the current container
+		level 2: look in the current container in union with the parent container
 		level 3: look in union of current, parent, parent of parent contexts
 		and so on.
 		level -1: look in union of all contexts.
@@ -141,7 +141,7 @@ type Context interface {
 	Bean(typ reflect.Type, level int) []Bean
 
 	/*
-		Lookup registered beans in context by name.
+		Lookup registered beans in container by name.
 		The name is the local package plus name of the interface, for example 'app.UserService'
 		Or if bean implements NamedBean interface the name of it.
 
@@ -149,14 +149,14 @@ type Context interface {
 			beans := ctx.Bean("app.UserService")
 			beans := ctx.Bean("userService")
 
-		Lookup parent context only for beans that were used in injection inside ctx context.
+		Lookup parent container only for beans that were used in injection inside ctx container.
 		If you need to lookup all beans, use the loop with Parent() call.
 	*/
 	Lookup(name string, level int) []Bean
 
 	/*
-		Inject fields in to the obj on runtime that is not part of core context.
-		Does not add a new bean in to the core context, so this method is only for one-time use with scope 'runtime'.
+		Inject fields in to the obj on runtime that is not part of core container.
+		Does not add a new bean in to the core container, so this method is only for one-time use with scope 'runtime'.
 		Does not initialize bean and does not destroy it.
 
 		Example:
@@ -178,12 +178,12 @@ type Context interface {
 	Resource(path string) (Resource, bool)
 
 	/*
-		Returns context placeholder properties
+		Returns container placeholder properties
 	*/
 	Properties() Properties
 
 	/*
-		Returns information about context
+		Returns information about container
 	*/
 	String() string
 }
@@ -191,8 +191,8 @@ type Context interface {
 /*
 This interface used to provide pre-scanned instances in glue.New method.
 When glue sees that instance implements Scanner interface, instead of adding
-instance itself to the context, glue it will call the method ScannerBeans() and
-add array of instances in to context.
+instance itself to the container, glue it will call the method ScannerBeans() and
+add array of instances in to container.
 
 Used for conditional or modular instance discovery.
 
@@ -212,29 +212,29 @@ type Scanner interface {
 }
 
 /*
-ChildContext is using to skip and delay initialization of the group of beans until application really needs it.
-It gives ability to declare hierarchy of context with lazy loading on demand.
+ChildContainer is using to skip and delay initialization of the group of beans until application really needs it.
+It gives ability to declare hierarchy of container with lazy loading on demand.
 
 Use method glue.Child(name string, scan... interface{}) to initialize this special bean.
 */
 
-var ChildContextClass = reflect.TypeOf((*ChildContext)(nil)).Elem()
+var ChildContainerClass = reflect.TypeOf((*ChildContainer)(nil)).Elem()
 
-type ChildContext interface {
+type ChildContainer interface {
 
 	/*
-		Returns the child context name, this name is not unique.
+		Returns the child container name, this name is not unique.
 	*/
 	ChildName() string
 
 	/*
-		Builds ctx context on the first request or returns existing one for all sequential calls.
+		Builds ctx container on the first request or returns existing one for all sequential calls.
 	*/
-	Object() (Context, error)
+	Object() (Container, error)
 
 	/*
-		Close ctx context if it was created. Safe to call twice or more.
-		Parent context is owning and responsible to close all ctx contexts created on demand.
+		Close ctx container if it was created. Safe to call twice or more.
+		Parent container is owning and responsible to close all ctx contexts created on demand.
 	*/
 	Close() error
 }
@@ -244,7 +244,7 @@ The bean object would be created after Object() function call.
 
 ObjectType can be pointer to structure or interface.
 
-All objects for now created are singletons, that means single instance with ObjectType in context.
+All objects for now created are singletons, that means single instance with ObjectType in container.
 */
 
 var FactoryBeanClass = reflect.TypeOf((*FactoryBean)(nil)).Elem()
@@ -252,7 +252,7 @@ var FactoryBeanClass = reflect.TypeOf((*FactoryBean)(nil)).Elem()
 type FactoryBean interface {
 
 	/*
-		returns an object produced by the factory, and this is the object that will be used in context, but not going to be a bean
+		returns an object produced by the factory, and this is the object that will be used in container, but not going to be a bean
 	*/
 	Object() (interface{}, error)
 
@@ -273,7 +273,7 @@ type FactoryBean interface {
 }
 
 /*
-Initializing bean context is using to run required method on post-construct injection stage
+Initializing bean container is using to run required method on post-construct injection stage
 */
 
 var InitializingBeanClass = reflect.TypeOf((*InitializingBean)(nil)).Elem()
@@ -281,7 +281,7 @@ var InitializingBeanClass = reflect.TypeOf((*InitializingBean)(nil)).Elem()
 type InitializingBean interface {
 
 	/*
-		Runs this method automatically after initializing and injecting context
+		Runs this method automatically after initializing and injecting container
 	*/
 
 	PostConstruct() error
@@ -289,14 +289,14 @@ type InitializingBean interface {
 
 /*
 *
-This interface uses to select objects that could free resources after closing context
+This interface uses to select objects that could free resources after closing container
 */
 var DisposableBeanClass = reflect.TypeOf((*DisposableBean)(nil)).Elem()
 
 type DisposableBean interface {
 
 	/*
-		During close context would be called for each bean in the core.
+		During close container would be called for each bean in the core.
 	*/
 
 	Destroy() error
@@ -347,7 +347,7 @@ type PrimaryBean interface {
 }
 
 /**
-Resource source is using to add bind resources in to the context
+Resource source is using to add bind resources in to the container
 */
 
 var ResourceSourceClass = reflect.TypeOf((*ResourceSource)(nil))
@@ -418,7 +418,7 @@ type PropertyResolver interface {
 }
 
 /*
-Use this bean to parse properties from file and place in context.
+Use this bean to parse properties from file and place in container.
 Merge properties from multiple PropertySource files in to one Properties bean.
 For placeholder properties this bean used as a source of values.
 

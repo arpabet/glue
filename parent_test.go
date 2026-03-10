@@ -57,9 +57,9 @@ func (t *coreBean) Inc() int {
 var serviceBeanClass = reflect.TypeOf((*serviceBean)(nil)) // *serviceBean
 type serviceBean struct {
 	Core        *coreBean      `inject:""`
-	Components  []Component    `inject:"optional,level=1"` // default level is 1, only current context
+	Components  []Component    `inject:"optional,level=1"` // default level is 1, only current container
 	Elements    []*implElement `inject:"optional,level=1"`
-	Components2 []Component    `inject:"optional,level=2"` // level 2 is current context plus parent context
+	Components2 []Component    `inject:"optional,level=2"` // level 2 is current container plus parent container
 	Elements2   []*implElement `inject:"optional,level=2"`
 	testing     *testing.T
 }
@@ -106,7 +106,7 @@ type parentBean struct {
 }
 
 func (t *parentBean) Destroy() error {
-	// should never happened since we are not closing this context, only ctx one
+	// should never happened since we are not closing this container, only ctx one
 	require.True(t.testing, false)
 	return nil
 }
@@ -179,7 +179,7 @@ func TestParentCollection(t *testing.T) {
 	require.Equal(t, "parent", list[0].Object().(*implElement).value)
 
 	/*
-		Test interface injected ctx context
+		Test interface injected ctx container
 	*/
 
 	list = child.Bean(ComponentClass, 0)
@@ -198,23 +198,23 @@ func TestParentCollection(t *testing.T) {
 	require.Equal(t, 1, len(list))
 	require.Equal(t, "fromChild", list[0].Object().(Component).Information())
 
-	list = child.Bean(ComponentClass, 2) // include parent context
+	list = child.Bean(ComponentClass, 2) // include parent container
 	require.Equal(t, 2, len(list))
 
-	list = child.Lookup("*glue_test.implComponent", 2) // include parent context
+	list = child.Lookup("*glue_test.implComponent", 2) // include parent container
 	require.Equal(t, 2, len(list))
 
-	list = child.Bean(ComponentClass, 3) // include parent context
+	list = child.Bean(ComponentClass, 3) // include parent container
 	require.Equal(t, 2, len(list))
 
-	list = child.Bean(ComponentClass, -1) // include parent context
+	list = child.Bean(ComponentClass, -1) // include parent container
 	require.Equal(t, 2, len(list))
 
 	require.Equal(t, "fromParent", list[0].Object().(Component).Information())
 	require.Equal(t, "fromChild", list[1].Object().(Component).Information())
 
 	/*
-		Test pointer injected ctx context
+		Test pointer injected ctx container
 	*/
 
 	list = child.Bean(implElementClass, 0)
@@ -274,19 +274,19 @@ func TestChildren(t *testing.T) {
 	require.Equal(t, 1, len(coreBean.Components))
 	require.Equal(t, "fromParent", coreBean.Components[0].Information())
 
-	// ChildContext should be found
-	list := parent.Bean(glue.ChildContextClass, glue.DefaultLevel)
+	// ChildContainer should be found
+	list := parent.Bean(glue.ChildContainerClass, glue.DefaultLevel)
 	require.Equal(t, 1, len(list))
 
-	// child context not yet created
+	// child container not yet created
 	require.Equal(t, 0, len(serviceBean.Elements2))
 
 	require.Equal(t, 1, len(parent.Children()))
-	// create child context
+	// create child container
 	child, err := parent.Children()[0].Object()
 	require.NoError(t, err)
 
-	// parent context test
+	// parent container test
 	require.Equal(t, 2, len(serviceBean.Elements2))
 	require.Equal(t, "ctx", serviceBean.Elements2[0].value)
 	require.Equal(t, "parent", serviceBean.Elements2[1].value)
@@ -306,7 +306,7 @@ func TestChildren(t *testing.T) {
 	require.Equal(t, 1, len(list))
 	require.Equal(t, "ctx", list[0].Object().(*implElement).value)
 
-	// parent owning child context, but let's close it early
+	// parent owning child container, but let's close it early
 	err = child.Close()
 	require.NoError(t, err)
 

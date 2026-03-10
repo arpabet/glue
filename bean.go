@@ -17,12 +17,12 @@ import (
 )
 
 const (
-	DefaultLevel                          = CurrentContextWithParentFallbackLevel
-	CurrentContextWithParentFallbackLevel = 0
-	CurrentContextLevel                   = 1
-	CurrentContextWithParentLevel         = 2
-	CurrentContextWithTwoParentsLevel     = 3
-	UnlimitedLevel                        = -1
+	DefaultLevel                   = CurrentWithParentFallbackLevel
+	CurrentWithParentFallbackLevel = 0
+	CurrentLevel                   = 1
+	CurrentWithParentLevel         = 2
+	CurrentWithTwoParentsLevel     = 3
+	UnlimitedLevel                 = -1
 )
 
 type beanDef struct {
@@ -124,7 +124,7 @@ type beanlist struct {
 }
 
 func (t beanlist) String() string {
-	return fmt.Sprintf("context{level=%d, beans=%v}", t.level, t.list)
+	return fmt.Sprintf("container{level=%d, beans=%v}", t.level, t.list)
 }
 
 func (t *bean) String() string {
@@ -208,7 +208,7 @@ func (t *beanDef) implements(ifaceType reflect.Type) bool {
 
 type factory struct {
 	/**
-	Bean associated with Factory in context
+	Bean associated with Factory in container
 	*/
 	bean *bean
 
@@ -332,8 +332,8 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 				stub := &factoryBeanStub{name: classPtr.String(), elemType: classPtr}
 				stubValuePtr := reflect.ValueOf(stub)
 				value.Field(j).Set(stubValuePtr)
-			case ContextClass:
-				return nil, errors.Errorf("exposing by anonymous field '%s' in '%v' interface glue.Context is not allowed", field.Name, classPtr)
+			case ContainerClass:
+				return nil, errors.Errorf("exposing by anonymous field '%s' in '%v' interface glue.Container is not allowed", field.Name, classPtr)
 			}
 		}
 
@@ -506,7 +506,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 //
 //	func() T
 //	func() (T, error)
-//	func(context.Context) (T, error)
+//	func(container.Container) (T, error)
 func validateDynamicValueFunc(fieldName string, classPtr reflect.Type, ft reflect.Type) error {
 	bad := func(msg string) error {
 		return errors.Errorf("dynamic value field '%s' in '%v': %s", fieldName, classPtr, msg)
@@ -516,15 +516,15 @@ func validateDynamicValueFunc(fieldName string, classPtr reflect.Type, ft reflec
 		// func() T  or  func() (T, error)
 	case 1:
 		if !ft.In(0).Implements(contextType) {
-			return bad("single parameter must be context.Context")
+			return bad("single parameter must be container.Container")
 		}
 	default:
-		return bad("must have 0 or 1 (context.Context) parameters")
+		return bad("must have 0 or 1 (container.Container) parameters")
 	}
 	switch ft.NumOut() {
 	case 1:
 		if ft.NumIn() != 0 {
-			return bad("func(context.Context) must return (T, error), not just T")
+			return bad("func(container.Container) must return (T, error), not just T")
 		}
 	case 2:
 		if ft.Out(1) != errorType {

@@ -54,9 +54,9 @@ func TestMultipleBeanByPointer(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	// Now glue check if repeated instances added to the context
+	// Now glue check if repeated instances added to the container
 	// if so, it would add only unique instance, therefore we would have
-	// context with first and second beans only and no error.
+	// container with first and second beans only and no error.
 
 	first := ctx.Bean(FirstBeanClass, glue.DefaultLevel)
 	require.Equal(t, 1, len(first))

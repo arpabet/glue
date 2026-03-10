@@ -97,7 +97,7 @@ func TestPostConstruct(t *testing.T) {
 		&beanClient{testing: t},
 		&beanServer{},
 		/**
-		  enum all interfaces in context, to make sure that all of them are initialized
+		  enum all interfaces in container, to make sure that all of them are initialized
 		*/
 		&struct {
 			ClientService ClientService `inject:""`
@@ -120,7 +120,7 @@ func TestPostConstructWithError(t *testing.T) {
 		&beanClient{testing: t},
 		&beanServer{throwError: true},
 		/**
-		  enum all interfaces in context, to make sure that all of them are initialized
+		  enum all interfaces in container, to make sure that all of them are initialized
 		*/
 		&struct {
 			ClientService ClientService `inject:""`
