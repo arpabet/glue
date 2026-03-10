@@ -421,6 +421,76 @@ Corner cases:
 * If a `Scanner` implements `ProfileBean`, the whole scanner is skipped when the profile does not match.
 * Beans returned by `ScannerBeans()` may also implement `ProfileBean`, which allows fine-grained filtering inside a scanner.
 
+### Conditional Beans
+
+Glue supports conditional bean registration for advanced cases where inclusion depends on arbitrary runtime conditions (e.g., "only if Redis is available", "only if a config flag is set").
+
+A bean that implements `ConditionalBean` is only registered when `ShouldRegisterBean()` returns `true`. The method is called during scanning, before injection and `PostConstruct`.
+
+```
+type ConditionalBean interface {
+    ShouldRegisterBean() bool
+}
+```
+
+Ordering with `ProfileBean`:
+* `ProfileBean` is checked first (cheap string match).
+* `ConditionalBean` is checked second (may do I/O or complex logic).
+* Both interfaces can be implemented on the same bean. If the profile does not match, `ShouldRegisterBean()` is never called.
+
+Example:
+```
+type redisCache struct {
+    addr string
+}
+
+func (t *redisCache) ShouldRegisterBean() bool {
+    conn, err := net.DialTimeout("tcp", t.addr, time.Second)
+    if err != nil {
+        return false
+    }
+    conn.Close()
+    return true
+}
+
+ctn, err := glue.New(
+    &redisCache{addr: "localhost:6379"},
+)
+require.Nil(t, err)
+defer ctn.Close()
+```
+
+Combined with profiles:
+```
+type devRedisCache struct {
+    addr string
+}
+
+func (t *devRedisCache) BeanProfile() string {
+    return "dev"
+}
+
+func (t *devRedisCache) ShouldRegisterBean() bool {
+    conn, err := net.DialTimeout("tcp", t.addr, time.Second)
+    if err != nil {
+        return false
+    }
+    conn.Close()
+    return true
+}
+
+ctn, err := glue.NewWithProfiles([]string{"dev"},
+    &devRedisCache{addr: "localhost:6379"},
+)
+require.Nil(t, err)
+defer ctn.Close()
+```
+
+Corner cases:
+* `ShouldRegisterBean()` is called on the raw object before any field injection. Injected fields are nil at this point.
+* If a `Scanner` implements `ConditionalBean`, the whole scanner is skipped when the condition is false.
+* Beans returned by `ScannerBeans()` may also implement `ConditionalBean` for fine-grained filtering.
+
 ### Extend
 
 Glue Framework has method Extend to create inherited container whereas parent sees only own beans, extended container sees parent and own glue.
