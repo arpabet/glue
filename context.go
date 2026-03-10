@@ -6,6 +6,7 @@
 package glue
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -68,11 +69,15 @@ type container struct {
 }
 
 func New(scan ...interface{}) (Container, error) {
-	return createContainer(nil, NewProperties(), scan)
+	return createContainer(context.Background(), nil, NewProperties(), scan)
 }
 
-func NewWithProperties(properties Properties, scan ...interface{}) (Container, error) {
-	return createContainer(nil, properties, scan)
+func NewWithContext(ctx context.Context, scan ...interface{}) (Container, error) {
+	return createContainer(ctx, nil, NewProperties(), scan)
+}
+
+func NewWithProperties(ctx context.Context, properties Properties, scan ...interface{}) (Container, error) {
+	return createContainer(ctx, nil, properties, scan)
 }
 
 func (t *container) Extend(scan ...interface{}) (Container, error) {
@@ -80,7 +85,15 @@ func (t *container) Extend(scan ...interface{}) (Container, error) {
 	properties := NewProperties()
 	properties.Extend(t.properties)
 
-	return createContainer(t, properties, scan)
+	return createContainer(context.Background(), t, properties, scan)
+}
+
+func (t *container) ExtendWithContext(ctx context.Context, scan ...interface{}) (Container, error) {
+
+	properties := NewProperties()
+	properties.Extend(t.properties)
+
+	return createContainer(ctx, t, properties, scan)
 }
 
 func (t *container) Parent() (Container, bool) {
@@ -91,7 +104,7 @@ func (t *container) Parent() (Container, bool) {
 	}
 }
 
-func createContainer(parent *container, properties Properties, scan []interface{}) (ctn *container, err error) {
+func createContainer(ctx context.Context, parent *container, properties Properties, scan []interface{}) (ctn *container, err error) {
 
 	core := make(map[reflect.Type][]*bean)
 	pointers := make(map[reflect.Type][]*injection)
@@ -493,7 +506,7 @@ func createContainer(parent *container, properties Properties, scan []interface{
 	/**
 	PostConstruct beans
 	*/
-	if err := ctn.postConstruct(primaryList, secondaryList); err != nil {
+	if err := ctn.postConstruct(ctx, primaryList, secondaryList); err != nil {
 		ctn.closeWithTimeout(DefaultCloseTimeout)
 		return nil, err
 	} else {
@@ -835,9 +848,9 @@ func reverseStack(stack []*bean) []*bean {
 	return out
 }
 
-func (t *container) constructBeanList(list []*bean, stack []*bean) error {
+func (t *container) constructBeanList(ctx context.Context, list []*bean, stack []*bean) error {
 	for _, bean := range list {
-		if err := t.constructBean(bean, stack); err != nil {
+		if err := t.constructBean(ctx, bean, stack); err != nil {
 			return err
 		}
 	}
@@ -855,7 +868,7 @@ func indent(n int) string {
 	return string(out)
 }
 
-func (t *container) constructBean(bean *bean, stack []*bean) (err error) {
+func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -870,6 +883,7 @@ func (t *container) constructBean(bean *bean, stack []*bean) (err error) {
 	}
 
 	_, isFactoryBean := bean.obj.(FactoryBean)
+	initializerWithContext, hasConstructorWithContext := bean.obj.(ContextInitializingBean)
 	initializer, hasConstructor := bean.obj.(InitializingBean)
 	if verbose != nil {
 		verbose.Printf("%sConstruct Bean '%s' with type '%v', isFactoryBean=%v, hasFactory=%v, hasObject=%v, hasConstructor=%v\n", indent(len(stack)), bean.name, bean.beanDef.classPtr, isFactoryBean, bean.beenFactory != nil, bean.obj != nil, hasConstructor)
@@ -890,7 +904,7 @@ func (t *container) constructBean(bean *bean, stack []*bean) (err error) {
 	}()
 
 	for _, factoryDep := range bean.factoryDependencies {
-		if err := t.constructBean(factoryDep.factory.bean, append(stack, bean)); err != nil {
+		if err := t.constructBean(ctx, factoryDep.factory.bean, append(stack, bean)); err != nil {
 			return err
 		}
 		if verbose != nil {
@@ -913,13 +927,13 @@ func (t *container) constructBean(bean *bean, stack []*bean) (err error) {
 	}
 
 	// construct bean dependencies
-	if err := t.constructBeanList(bean.dependencies, append(stack, bean)); err != nil {
+	if err := t.constructBeanList(ctx, bean.dependencies, append(stack, bean)); err != nil {
 		return err
 	}
 
 	// check if it is empty element bean
 	if bean.beenFactory != nil && bean.obj == nil {
-		if err := t.constructBean(bean.beenFactory.bean, append(stack, bean)); err != nil {
+		if err := t.constructBean(ctx, bean.beenFactory.bean, append(stack, bean)); err != nil {
 			return err
 		}
 		if verbose != nil {
@@ -953,12 +967,18 @@ func (t *container) constructBean(bean *bean, stack []*bean) (err error) {
 		}
 	}
 
-	if hasConstructor {
+	if hasConstructorWithContext || hasConstructor {
 		if verbose != nil {
 			verbose.Printf("%sPostConstruct Bean '%s' with type '%v'\n", indent(len(stack)), bean.name, bean.beanDef.classPtr)
 		}
-		if err := initializer.PostConstruct(); err != nil {
-			return errors.Errorf("post construct failed %s, %v", getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
+		if hasConstructorWithContext {
+			if err := initializerWithContext.PostConstruct(ctx); err != nil {
+				return errors.Errorf("post construct failed %s, %v", getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
+			}
+		} else {
+			if err := initializer.PostConstruct(); err != nil {
+				return errors.Errorf("post construct failed %s, %v", getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
+			}
 		}
 	}
 
@@ -968,12 +988,14 @@ func (t *container) constructBean(bean *bean, stack []*bean) (err error) {
 }
 
 func (t *container) addDisposable(bean *bean) {
-	if _, ok := bean.obj.(DisposableBean); ok {
+	if _, ok := bean.obj.(ContextDisposableBean); ok {
+		t.disposables = append(t.disposables, bean)
+	} else if _, ok := bean.obj.(DisposableBean); ok {
 		t.disposables = append(t.disposables, bean)
 	}
 }
 
-func (t *container) postConstruct(lists ...[]*bean) (err error) {
+func (t *container) postConstruct(ctx context.Context, lists ...[]*bean) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -982,7 +1004,7 @@ func (t *container) postConstruct(lists ...[]*bean) (err error) {
 	}()
 
 	for _, list := range lists {
-		if err = t.constructBeanList(list, nil); err != nil {
+		if err = t.constructBeanList(ctx, list, nil); err != nil {
 			return err
 		}
 	}
@@ -990,8 +1012,13 @@ func (t *container) postConstruct(lists ...[]*bean) (err error) {
 	return nil
 }
 
-// destroy in reverse initialization order
+// Close - destroy in reverse initialization order
 func (t *container) Close() (err error) {
+	return t.CloseWithContext(context.Background())
+}
+
+// CloseWithContext - destroy in reverse initialization order with context
+func (t *container) CloseWithContext(ctx context.Context) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -1003,14 +1030,14 @@ func (t *container) Close() (err error) {
 	t.closeOnce.Do(func() {
 
 		for _, child := range t.children {
-			if err := child.Close(); err != nil {
+			if err := child.CloseWithContext(ctx); err != nil {
 				listErr = append(listErr, err)
 			}
 		}
 
 		n := len(t.disposables)
 		for j := n - 1; j >= 0; j-- {
-			if err := t.destroyBean(t.disposables[j]); err != nil {
+			if err := t.destroyBean(ctx, t.disposables[j]); err != nil {
 				listErr = append(listErr, err)
 			}
 		}
@@ -1019,7 +1046,7 @@ func (t *container) Close() (err error) {
 	return multipleErr(listErr)
 }
 
-func (t *container) destroyBean(b *bean) (err error) {
+func (t *container) destroyBean(ctx context.Context, b *bean) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -1033,9 +1060,15 @@ func (t *container) destroyBean(b *bean) (err error) {
 
 	b.lifecycle = BeanDestroying
 	if verbose != nil {
-		verbose.Printf("Destroy bean '%s' with type '%v'\n", b.name, b.beanDef.classPtr)
+		verbose.Printf("Destroying bean '%s' with type '%v'\n", b.name, b.beanDef.classPtr)
 	}
-	if dis, ok := b.obj.(DisposableBean); ok {
+	if dis, ok := b.obj.(ContextDisposableBean); ok {
+		if e := dis.Destroy(ctx); e != nil {
+			err = e
+		} else {
+			b.lifecycle = BeanDestroyed
+		}
+	} else if dis, ok := b.obj.(DisposableBean); ok {
 		if e := dis.Destroy(); e != nil {
 			err = e
 		} else {
@@ -1165,6 +1198,15 @@ func (t *childContext) Close() (err error) {
 	t.closeOnes.Do(func() {
 		if t.ctx != nil {
 			err = t.ctx.Close()
+		}
+	})
+	return
+}
+
+func (t *childContext) CloseWithContext(ctx context.Context) (err error) {
+	t.closeOnes.Do(func() {
+		if t.ctx != nil {
+			err = t.ctx.CloseWithContext(ctx)
 		}
 	})
 	return

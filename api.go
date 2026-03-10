@@ -6,6 +6,7 @@
 package glue
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"os"
@@ -44,6 +45,10 @@ func (t BeanLifecycle) String() string {
 }
 
 var BeanClass = reflect.TypeOf((*Bean)(nil)).Elem()
+
+/*
+	Bean interface is the major component in this framework that represents the atomic object that has relations to other objects
+*/
 
 type Bean interface {
 
@@ -93,34 +98,48 @@ type Bean interface {
 
 var ContainerClass = reflect.TypeOf((*Container)(nil)).Elem()
 
+/**
+Container interface is why this framework exist, maintains the set of beans and relations between them.
+*/
+
 type Container interface {
 	/*
-		Gets parent container if exist
+		Parent - gets the parent container if exist
 	*/
 	Parent() (Container, bool)
 
 	/*
-		New new container with additional beans based on current one
+		Extend - creates a new container on top of beans from the current container
 	*/
 	Extend(scan ...interface{}) (Container, error)
 
 	/*
-		Returns list of ctx container inside the current container only
+		ExtendWithContext - creates a new container on top of beans from the current container with context
+	*/
+	ExtendWithContext(ctx context.Context, scan ...interface{}) (Container, error)
+
+	/*
+		Children - Returns list of ctx container inside the current container only
 	*/
 	Children() []ChildContainer
 
 	/*
-		Destroy all beans that implement interface DisposableBean.
+		Close - Destroy all beans that implement interface DisposableBean
 	*/
 	Close() error
 
 	/*
-		Get list of all registered instances on creation of container with scope 'core'
+		CloseWithContext - Destroy all beans that implement interface DisposableBean with context
+	*/
+	CloseWithContext(ctx context.Context) error
+
+	/*
+		Core - Get list of all registered instances on creation of container with scope 'core'
 	*/
 	Core() []reflect.Type
 
 	/*
-		Gets obj by type, that is a pointer to the structure or interface.
+		Bean - Gets obj by type, that is a pointer to the structure or interface.
 
 		Example:
 			package app
@@ -237,6 +256,11 @@ type ChildContainer interface {
 		Parent container is owning and responsible to close all ctx contexts created on demand.
 	*/
 	Close() error
+
+	/*
+		CloseWithContext - closes ctx container if it was created with context
+	*/
+	CloseWithContext(ctx context.Context) error
 }
 
 /*
@@ -272,85 +296,116 @@ type FactoryBean interface {
 	Singleton() bool
 }
 
-/*
-Initializing bean container is using to run required method on post-construct injection stage
-*/
-
 var InitializingBeanClass = reflect.TypeOf((*InitializingBean)(nil)).Elem()
+
+/*
+InitializingBean interface is using to run required method on post-construct injection stage
+*/
 
 type InitializingBean interface {
 
 	/*
-		Runs this method automatically after initializing and injecting container
+		PostConstruct - Runs this method automatically after initializing and injecting container
 	*/
 
 	PostConstruct() error
 }
 
+var ContextInitializingBeanClass = reflect.TypeOf((*ContextInitializingBean)(nil)).Elem()
+
 /*
-*
-This interface uses to select objects that could free resources after closing container
+ContextInitializingBean interface is using to run required method on post-construct injection stage with context
 */
+
+type ContextInitializingBean interface {
+
+	/*
+		PostConstructWithContext - Runs this method automatically after initializing and injecting container with context
+	*/
+
+	PostConstruct(ctx context.Context) error
+}
+
 var DisposableBeanClass = reflect.TypeOf((*DisposableBean)(nil)).Elem()
+
+/*
+DisposableBean uses to select objects that could free resources after closing container
+*/
 
 type DisposableBean interface {
 
 	/*
-		During close container would be called for each bean in the core.
+		Destroy - close container would be called for each bean in the container
 	*/
 
 	Destroy() error
 }
 
+var ContextDisposableBeanClass = reflect.TypeOf((*ContextDisposableBean)(nil)).Elem()
+
 /*
-*
-This interface used to collect all beans with similar type in map, where the name is the key
+ContextDisposableBean uses to select objects that could free resources after closing container with context
 */
+
+type ContextDisposableBean interface {
+
+	/*
+		DestroyWithContext - close container would be called for each bean in the container with context
+	*/
+
+	Destroy(ctx context.Context) error
+}
+
 var NamedBeanClass = reflect.TypeOf((*NamedBean)(nil)).Elem()
+
+/*
+NamedBean interface used to collect all beans with similar type in map, where the name is the key
+*/
 
 type NamedBean interface {
 
 	/*
-		Returns bean name
+		BeanName - returns unique bean name (qualifier)
 	*/
 	BeanName() string
 }
 
-/*
-*
-This interface used to collect beans in list with specific order
-*/
 var OrderedBeanClass = reflect.TypeOf((*OrderedBean)(nil)).Elem()
+
+/*
+OrderedBean interface used to collect beans in list with specific order
+*/
 
 type OrderedBean interface {
 
 	/*
-		Returns bean order
+		BeanOrder - returns bean order using for acceding sorting of beans before injecting to collection
 	*/
 	BeanOrder() int
 }
 
+var PrimaryBeanClass = reflect.TypeOf((*PrimaryBean)(nil)).Elem()
+
 /*
-This interface used to mark a bean as primary among multiple implementations of the same interface.
+PrimaryBean interface used to mark a bean as primary among multiple implementations of the same interface.
 When multiple beans implement the same interface, the primary bean will be injected by default.
 This does not affect collection and order of the beans.
 If two+ primary beans found for one single field injection the ambiguation error would be returned.
 */
-var PrimaryBeanClass = reflect.TypeOf((*PrimaryBean)(nil)).Elem()
 
 type PrimaryBean interface {
 
 	/*
-		Returns true if this bean should be considered the primary implementation
+		IsPrimaryBean - returns true if this bean should be considered the primary implementation
 	*/
 	IsPrimaryBean() bool
 }
 
-/**
-Resource source is using to add bind resources in to the container
-*/
-
 var ResourceSourceClass = reflect.TypeOf((*ResourceSource)(nil))
+
+/**
+ResourceSource is using to add bind resources in to the container
+*/
 
 type ResourceSource struct {
 
@@ -371,11 +426,11 @@ type ResourceSource struct {
 	AssetFiles http.FileSystem
 }
 
-/*
-Property source is serving as a property placeholder of file if it's ending with ".properties", ".props", ".yaml" or ".yml".
-*/
-
 var PropertySourceClass = reflect.TypeOf((*PropertySource)(nil))
+
+/*
+PropertySource is serving as a property placeholder of file if it's ending with ".properties", ".props", ".yaml" or ".yml".
+*/
 
 type PropertySource struct {
 
@@ -398,11 +453,11 @@ var MapPropertySourceClass = reflect.TypeOf((*MapPropertySource)(nil)).Elem()
 
 type MapPropertySource map[string]interface{}
 
-/*
-Property Resolver interface used to enhance the Properties interface with additional sources of properties.
-*/
-
 var PropertyResolverClass = reflect.TypeOf((*PropertyResolver)(nil))
+
+/*
+PropertyResolver interface used to enhance the Properties interface with additional sources of properties.
+*/
 
 type PropertyResolver interface {
 
@@ -412,7 +467,7 @@ type PropertyResolver interface {
 	Priority() int
 
 	/*
-		Resolves the property
+		GetProperty - Resolves the property
 	*/
 	GetProperty(key string) (value string, ok bool)
 }
