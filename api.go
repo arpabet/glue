@@ -364,6 +364,11 @@ type ChildContainer interface {
 	Object() (Container, error)
 
 	/*
+		Builds ctx container on the first request using the provided context or returns existing one for all sequential calls.
+	*/
+	ObjectWithContext(ctx context.Context) (Container, error)
+
+	/*
 		Close ctx container if it was created. Safe to call twice or more.
 		Parent container is owning and responsible to close all ctx contexts created on demand.
 	*/

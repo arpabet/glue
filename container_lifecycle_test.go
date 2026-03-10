@@ -207,6 +207,26 @@ func TestCloseWithContext_PropagatedToChildren(t *testing.T) {
 	require.Equal(t, "child-destroy", child.destroyCtx.Value(contextKey("test")))
 }
 
+func TestChildObjectWithContext(t *testing.T) {
+	child := &contextAwareBean{}
+
+	ctn, err := glue.New(
+		glue.Child("sub", child),
+	)
+	require.NoError(t, err)
+	defer ctn.Close()
+
+	children := ctn.Children()
+	require.Equal(t, 1, len(children))
+
+	createCtx := context.WithValue(context.Background(), contextKey("test"), "child-init")
+	_, err = children[0].ObjectWithContext(createCtx)
+	require.NoError(t, err)
+
+	require.True(t, child.constructed)
+	require.Equal(t, "child-init", child.constructCtx.Value(contextKey("test")))
+}
+
 func TestNewWithContext_Background(t *testing.T) {
 	b := &contextAwareBean{}
 	ctn, err := glue.New(b)

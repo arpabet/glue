@@ -1409,8 +1409,12 @@ func (t *childContext) ChildName() string {
 }
 
 func (t *childContext) Object() (ctx Container, err error) {
+	return t.ObjectWithContext(context.Background())
+}
+
+func (t *childContext) ObjectWithContext(ctx context.Context) (ctn Container, err error) {
 	t.extendOnes.Do(func() {
-		t.ctx, t.err = t.Parent.Extend(t.scan...)
+		t.ctx, t.err = t.Parent.ExtendWithContext(ctx, t.scan...)
 	})
 	return t.ctx, t.err
 }
