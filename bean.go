@@ -17,12 +17,12 @@ import (
 )
 
 const (
-	DefaultLevel                   = CurrentWithParentFallbackLevel
-	CurrentWithParentFallbackLevel = 0
-	CurrentLevel                   = 1
-	CurrentWithParentLevel         = 2
-	CurrentWithTwoParentsLevel     = 3
-	UnlimitedLevel                 = -1
+	DefaultSearchLevel         = SearchFallback
+	SearchFallback             = 0  // current, otherwise nearest parent match
+	SearchCurrent              = 1  // current only
+	SearchCurrentAndParent     = 2  // current + direct parent
+	SearchCurrentAndTwoParents = 3  // current + parent + grandparent
+	SearchCurrentAndAllParents = -1 // all visible ancestors
 )
 
 type beanDef struct {
@@ -382,7 +382,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 			var qualifier string
 			var optional bool
 			var lazy bool
-			level := DefaultLevel
+			level := DefaultSearchLevel
 			if hasInjectTag {
 				pairs := strings.Split(injectTag, ",")
 				for _, pair := range pairs {
@@ -397,7 +397,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 						optional = true
 					case "lazy":
 						lazy = true
-					case "level":
+					case "level", "search":
 						if len(kv) > 1 {
 							level, _ = strconv.Atoi(kv[1])
 						}

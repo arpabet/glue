@@ -37,7 +37,7 @@ func TestBeanByPointer(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	second := ctx.Bean(SecondBeanClass, glue.DefaultLevel)
+	second := ctx.Bean(SecondBeanClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(second))
 
 	second[0].Object().(*secondBean).Run()
@@ -58,10 +58,10 @@ func TestMultipleBeanByPointer(t *testing.T) {
 	// if so, it would add only unique instance, therefore we would have
 	// container with first and second beans only and no error.
 
-	first := ctx.Bean(FirstBeanClass, glue.DefaultLevel)
+	first := ctx.Bean(FirstBeanClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(first))
 
-	second := ctx.Bean(SecondBeanClass, glue.DefaultLevel)
+	second := ctx.Bean(SecondBeanClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(second))
 
 }
@@ -74,7 +74,7 @@ func TestSearchBeanByPointerNotFound(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	second := ctx.Bean(SecondBeanClass, glue.DefaultLevel)
+	second := ctx.Bean(SecondBeanClass, glue.DefaultSearchLevel)
 	require.Equal(t, 0, len(second))
 
 }
@@ -143,12 +143,12 @@ func TestBeanByInterface(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	firstService := ctx.Bean(FirstServiceClass, glue.DefaultLevel)
+	firstService := ctx.Bean(FirstServiceClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(firstService))
 
 	firstService[0].Object().(FirstService).First()
 
-	secondService := ctx.Bean(SecondServiceClass, glue.DefaultLevel)
+	secondService := ctx.Bean(SecondServiceClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(secondService))
 
 	secondService[0].Object().(SecondService).Second()
@@ -187,7 +187,7 @@ func TestSpecificBeanByInterface(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	firstService := ctx.Bean(FirstServiceClass, glue.DefaultLevel)
+	firstService := ctx.Bean(FirstServiceClass, glue.DefaultSearchLevel)
 	require.Equal(t, 2, len(firstService))
 
 	firstService[0].Object().(FirstService).First()
@@ -226,7 +226,7 @@ func TestQualifierAliasForBean(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	firstService := ctx.Bean(FirstServiceClass, glue.DefaultLevel)
+	firstService := ctx.Bean(FirstServiceClass, glue.DefaultSearchLevel)
 	require.Equal(t, 2, len(firstService))
 
 	firstService[0].Object().(FirstService).First()
@@ -247,7 +247,7 @@ func TestShorthandQualifier(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	firstService := ctx.Bean(FirstServiceClass, glue.DefaultLevel)
+	firstService := ctx.Bean(FirstServiceClass, glue.DefaultSearchLevel)
 	require.Equal(t, 2, len(firstService))
 
 	firstService[0].Object().(FirstService).First()

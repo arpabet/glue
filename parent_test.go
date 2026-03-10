@@ -88,12 +88,12 @@ func TestParent(t *testing.T) {
 	p, _ := service.Parent()
 	require.Equal(t, parent, p)
 
-	b := service.Bean(serviceBeanClass, glue.DefaultLevel)
+	b := service.Bean(serviceBeanClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 
 	b[0].Object().(*serviceBean).Run()
 
-	b = service.Bean(coreBeanClass, glue.DefaultLevel)
+	b = service.Bean(coreBeanClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 
 	cnt := b[0].Object().(*coreBean).count
@@ -275,7 +275,7 @@ func TestChildren(t *testing.T) {
 	require.Equal(t, "fromParent", coreBean.Components[0].Information())
 
 	// ChildContainer should be found
-	list := parent.Bean(glue.ChildContainerClass, glue.DefaultLevel)
+	list := parent.Bean(glue.ChildContainerClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(list))
 
 	// child container not yet created

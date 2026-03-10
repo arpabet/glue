@@ -49,7 +49,7 @@ func TestCreateEmpty(t *testing.T) {
 
 	require.Equal(t, 2, len(ctx.Core()))
 
-	c := ctx.Bean(glue.ContainerClass, glue.DefaultLevel)
+	c := ctx.Bean(glue.ContainerClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(c))
 	require.Equal(t, ctx, c[0].Object())
 
@@ -228,34 +228,34 @@ func TestCreate(t *testing.T) {
 
 	require.Equal(t, 8, len(ctx.Core()))
 
-	list := ctx.Lookup("storage", glue.DefaultLevel)
+	list := ctx.Lookup("storage", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(list))
 	storageInstance := list[0].Object().(*storageImpl)
 	require.NotNil(t, storageInstance)
 	require.Equal(t, storageInstance.Logger, logger)
-	require.Equal(t, storageInstance, ctx.Bean(StorageClass, glue.DefaultLevel)[0].Object())
+	require.Equal(t, storageInstance, ctx.Bean(StorageClass, glue.DefaultSearchLevel)[0].Object())
 
-	list = ctx.Lookup("configService", glue.DefaultLevel)
+	list = ctx.Lookup("configService", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(list))
 	configServiceInstance := list[0].Object().(*configServiceImpl)
 	require.NotNil(t, configServiceInstance)
 	require.Equal(t, configServiceInstance.Storage, storageInstance)
-	require.Equal(t, configServiceInstance, ctx.Bean(ConfigServiceClass, glue.DefaultLevel)[0].Object())
+	require.Equal(t, configServiceInstance, ctx.Bean(ConfigServiceClass, glue.DefaultSearchLevel)[0].Object())
 
-	list = ctx.Lookup("*glue_test.userServiceImpl", glue.DefaultLevel)
+	list = ctx.Lookup("*glue_test.userServiceImpl", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(list))
 	userServiceInstance := list[0].Object().(*userServiceImpl)
 	require.NotNil(t, userServiceInstance)
 	require.Equal(t, userServiceInstance.Storage, storageInstance)
 	require.Equal(t, userServiceInstance.ConfigService, configServiceInstance)
-	require.Equal(t, userServiceInstance, ctx.Bean(UserServiceClass, glue.DefaultLevel)[0].Object())
+	require.Equal(t, userServiceInstance, ctx.Bean(UserServiceClass, glue.DefaultSearchLevel)[0].Object())
 
-	list = ctx.Lookup("*glue_test.appServiceImpl", glue.DefaultLevel)
+	list = ctx.Lookup("*glue_test.appServiceImpl", glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(list))
 	appServiceInstance := list[0].Object().(*appServiceImpl)
 	require.NotNil(t, appServiceInstance)
 	require.Equal(t, ctx, appServiceInstance.GetContainer())
-	require.Equal(t, appServiceInstance, ctx.Bean(AppServiceClass, glue.DefaultLevel)[0].Object())
+	require.Equal(t, appServiceInstance, ctx.Bean(AppServiceClass, glue.DefaultSearchLevel)[0].Object())
 
 }
 
@@ -389,7 +389,7 @@ func TestMissingInterfaceBean(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	list := ctx.Lookup("glue_test.UserService", glue.DefaultLevel)
+	list := ctx.Lookup("glue_test.UserService", glue.DefaultSearchLevel)
 
 	/**
 	No one is requested context_test.UserService in scan list, therefore no bean defined under this interface
@@ -399,7 +399,7 @@ func TestMissingInterfaceBean(t *testing.T) {
 	*/
 	require.Equal(t, 0, len(list))
 
-	b := ctx.Bean(UserServiceClass, glue.DefaultLevel)
+	b := ctx.Bean(UserServiceClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 
 }

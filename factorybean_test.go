@@ -104,7 +104,7 @@ func TestSingleFactoryBean(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	b := ctx.Bean(beanConstructedClass, glue.DefaultLevel)
+	b := ctx.Bean(beanConstructedClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(b))
 
 	require.NotNil(t, b[0])
@@ -228,7 +228,7 @@ func TestFactoryInterfaceBean(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	bc := ctx.Bean(BeanConstructedClass, glue.DefaultLevel)
+	bc := ctx.Bean(BeanConstructedClass, glue.DefaultSearchLevel)
 	require.Equal(t, 1, len(bc))
 
 	err = bc[0].Object().(BeanConstructed).Run()
