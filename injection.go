@@ -6,6 +6,7 @@
 package glue
 
 import (
+	goctx "context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -137,7 +138,32 @@ type propInjectionDef struct {
 		Time Format for date-time property
 	*/
 	timeFormat string
+
+	/*
+		dynamic is true when the field type is a function — property is resolved lazily on each call
+	*/
+	dynamic bool
+
+	/*
+		funcReturnType is T in func() T, func() (T, error), or func(context.Context) (T, error)
+	*/
+	funcReturnType reflect.Type
+
+	/*
+		funcReturnsError is true for func() (T, error) and func(context.Context) (T, error) signatures
+	*/
+	funcReturnsError bool
+
+	/*
+		funcTakesContext is true for func(context.Context) (T, error) signature
+	*/
+	funcTakesContext bool
 }
+
+var (
+	errorType   = reflect.TypeOf((*error)(nil)).Elem()
+	contextType = reflect.TypeOf((*goctx.Context)(nil)).Elem()
+)
 
 /*
 Prepare beans for the specific level of injection
@@ -430,7 +456,7 @@ func (t *injectionDef) inject(value *reflect.Value, deep []beanlist) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if impl.lifecycle != BeanInitialized {
 		return errors.Errorf("field '%s' in class '%v' can not be injected with non-initialized bean %+v", t.fieldName, t.class, impl)
 	}
@@ -488,6 +514,10 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 		return errors.Errorf("field '%s' in class '%v' is not public", t.fieldName, t.class)
 	}
 
+	if t.dynamic {
+		return t.injectDynamic(field, properties)
+	}
+
 	var strValue string
 	if value, ok := properties.Get(t.propertyName); ok {
 		strValue = value
@@ -505,6 +535,80 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 	field.Set(v)
 	return nil
 
+}
+
+func (t *propInjectionDef) injectDynamic(field reflect.Value, properties Properties) error {
+	propertyName := t.propertyName
+	defaultValue := t.defaultValue
+	hasDefaultValue := t.hasDefaultValue
+	timeFormat := t.timeFormat
+	returnType := t.funcReturnType
+
+	resolve := func() (string, bool) {
+		if val, ok := properties.Get(propertyName); ok {
+			return val, true
+		}
+		if hasDefaultValue {
+			return defaultValue, true
+		}
+		return "", false
+	}
+
+	convert := func(s string) (reflect.Value, error) {
+		return convertProperty(s, returnType, timeFormat)
+	}
+
+	zeroReturn := reflect.Zero(returnType)
+	zeroError := reflect.Zero(errorType)
+
+	var fn reflect.Value
+
+	switch {
+	case t.funcTakesContext:
+		// func(context.Context) (T, error)
+		fn = reflect.MakeFunc(t.fieldType, func(args []reflect.Value) []reflect.Value {
+			str, ok := resolve()
+			if !ok {
+				return []reflect.Value{zeroReturn, reflect.ValueOf(fmt.Errorf("property '%s' not found and has no default value", propertyName))}
+			}
+			val, err := convert(str)
+			if err != nil {
+				return []reflect.Value{zeroReturn, reflect.ValueOf(err)}
+			}
+			return []reflect.Value{val, zeroError}
+		})
+
+	case t.funcReturnsError:
+		// func() (T, error)
+		fn = reflect.MakeFunc(t.fieldType, func(args []reflect.Value) []reflect.Value {
+			str, ok := resolve()
+			if !ok {
+				return []reflect.Value{zeroReturn, reflect.ValueOf(fmt.Errorf("property '%s' not found and has no default value", propertyName))}
+			}
+			val, err := convert(str)
+			if err != nil {
+				return []reflect.Value{zeroReturn, reflect.ValueOf(err)}
+			}
+			return []reflect.Value{val, zeroError}
+		})
+
+	default:
+		// func() T — default= is guaranteed at construction time, so resolve() always returns true.
+		fn = reflect.MakeFunc(t.fieldType, func(args []reflect.Value) []reflect.Value {
+			str, ok := resolve()
+			if !ok {
+				return []reflect.Value{zeroReturn}
+			}
+			val, err := convert(str)
+			if err != nil {
+				panic(fmt.Sprintf("property '%s' convert error: %v", propertyName, err))
+			}
+			return []reflect.Value{val}
+		})
+	}
+
+	field.Set(fn)
+	return nil
 }
 
 func convertProperty(s string, t reflect.Type, timeFormat string) (val reflect.Value, err error) {

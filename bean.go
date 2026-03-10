@@ -379,6 +379,21 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 				hasDefaultValue: hasDefaultValue,
 				timeFormat:      timeFormat,
 			}
+			if field.Type.Kind() == reflect.Func {
+				ft := field.Type
+				if err := validateDynamicValueFunc(field.Name, classPtr, ft); err != nil {
+					return nil, err
+				}
+				funcReturnsError := ft.NumOut() == 2
+				funcTakesContext := ft.NumIn() == 1
+				if !funcReturnsError && !funcTakesContext && !hasDefaultValue {
+					return nil, errors.Errorf("dynamic value field '%s' in '%v': func() T requires a 'default' option since it cannot return an error", field.Name, classPtr)
+				}
+				def.dynamic = true
+				def.funcTakesContext = funcTakesContext
+				def.funcReturnsError = funcReturnsError
+				def.funcReturnType = ft.Out(0)
+			}
 			properties = append(properties, def)
 			continue
 		}
@@ -485,6 +500,40 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 		},
 		lifecycle: BeanCreated,
 	}, nil
+}
+
+// validateDynamicValueFunc checks that ft is one of the three supported signatures:
+//
+//	func() T
+//	func() (T, error)
+//	func(context.Context) (T, error)
+func validateDynamicValueFunc(fieldName string, classPtr reflect.Type, ft reflect.Type) error {
+	bad := func(msg string) error {
+		return errors.Errorf("dynamic value field '%s' in '%v': %s", fieldName, classPtr, msg)
+	}
+	switch ft.NumIn() {
+	case 0:
+		// func() T  or  func() (T, error)
+	case 1:
+		if !ft.In(0).Implements(contextType) {
+			return bad("single parameter must be context.Context")
+		}
+	default:
+		return bad("must have 0 or 1 (context.Context) parameters")
+	}
+	switch ft.NumOut() {
+	case 1:
+		if ft.NumIn() != 0 {
+			return bad("func(context.Context) must return (T, error), not just T")
+		}
+	case 2:
+		if ft.Out(1) != errorType {
+			return bad("second return value must be error")
+		}
+	default:
+		return bad("must return 1 or 2 values")
+	}
+	return nil
 }
 
 func isSomeoneImplements(iface reflect.Type, list []reflect.Type) bool {
