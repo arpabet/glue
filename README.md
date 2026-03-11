@@ -594,6 +594,37 @@ Search level semantics:
 * Higher positive numbers continue the same pattern.
 * `SearchCurrentAndAllParents` (`-1`): look in union of all visible parent containers.
 
+
+### Benchmark
+
+The goal of the benchmark to test runtime initialization and injection based on instances and interfaces.
+
+```
+glue % make bench
+go test -bench=Benchmark -benchmem -count=1 -run=^2>&1
+goos: darwin
+goarch: arm64
+pkg: go.arpabet.com/glue
+cpu: Apple M4
+BenchmarkStartupPointer_100-10        	   71410	     14982 ns/op	   40120 B/op	     342 allocs/op
+BenchmarkStartupPointer_1000-10       	    7549	    168817 ns/op	  409934 B/op	    3959 allocs/op
+BenchmarkStartupPointer_5000-10       	    1267	    945989 ns/op	 2106066 B/op	   19995 allocs/op
+BenchmarkStartupInterface_100-10      	   29922	     40311 ns/op	   65435 B/op	     681 allocs/op
+BenchmarkStartupInterface_1000-10     	    2998	    415132 ns/op	  740575 B/op	    7759 allocs/op
+BenchmarkStartupInterface_5000-10     	     570	   2097789 ns/op	 3770327 B/op	   39833 allocs/op
+BenchmarkLookupByType_100-10          	 2161590	       553.3 ns/op	    4496 B/op	       9 allocs/op
+BenchmarkLookupByType_1000-10         	  296642	      4115 ns/op	   35216 B/op	      12 allocs/op
+BenchmarkLookupByType_5000-10         	   26079	     46393 ns/op	  240029 B/op	      16 allocs/op
+BenchmarkLookupByInterface_100-10     	 2135553	       559.1 ns/op	    4496 B/op	       9 allocs/op
+BenchmarkLookupByInterface_1000-10    	  253238	      4739 ns/op	   35216 B/op	      12 allocs/op
+BenchmarkLookupByInterface_5000-10    	   26869	     44055 ns/op	  240026 B/op	      16 allocs/op
+BenchmarkLookupByName_100-10          	31096071	        37.94 ns/op	      48 B/op	       2 allocs/op
+BenchmarkLookupByName_1000-10         	30604144	        38.72 ns/op	      48 B/op	       2 allocs/op
+BenchmarkLookupByName_5000-10         	27844650	        42.43 ns/op	      48 B/op	       2 allocs/op
+PASS
+ok  	go.arpabet.com/glue	21.338s
+```
+
 ### Contributions
 
 If you find a bug or issue, please create a ticket.
