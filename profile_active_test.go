@@ -14,8 +14,11 @@ import (
 func TestIsProfileActive(t *testing.T) {
 	active := map[string]struct{}{"dev": {}, "local": {}}
 
-	require.True(t, isProfileActive(nil, ""))
-	require.True(t, isProfileActive(active, ""))
+	require.False(t, isProfileActive(nil, ""))
+	require.False(t, isProfileActive(active, ""))
+
+	require.True(t, isProfileActive(nil, "*"))
+	require.True(t, isProfileActive(active, "*"))
 
 	require.True(t, isProfileActive(active, "dev"))
 	require.False(t, isProfileActive(active, "prod"))

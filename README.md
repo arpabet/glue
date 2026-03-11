@@ -625,6 +625,34 @@ PASS
 ok  	go.arpabet.com/glue	21.338s
 ```
 
+after global cache of classPtr
+
+```
+glue % make bench
+go test -bench=Benchmark -benchmem -count=1 -run=^2>&1
+goos: darwin
+goarch: arm64
+pkg: go.arpabet.com/glue
+cpu: Apple M4
+BenchmarkStartupPointer_100-10        	   88172	     11894 ns/op	   30504 B/op	     242 allocs/op
+BenchmarkStartupPointer_1000-10       	    9292	    129781 ns/op	  313917 B/op	    2959 allocs/op
+BenchmarkStartupPointer_5000-10       	    1762	    666823 ns/op	 1626032 B/op	   14995 allocs/op
+BenchmarkStartupInterface_100-10      	   33476	     35030 ns/op	   55094 B/op	     576 allocs/op
+BenchmarkStartupInterface_1000-10     	    3475	    370692 ns/op	  647953 B/op	    6754 allocs/op
+BenchmarkStartupInterface_5000-10     	     609	   1836775 ns/op	 3274458 B/op	   34828 allocs/op
+BenchmarkLookupByType_100-10          	 2146564	       561.2 ns/op	    4496 B/op	       9 allocs/op
+BenchmarkLookupByType_1000-10         	  306914	      3881 ns/op	   35216 B/op	      12 allocs/op
+BenchmarkLookupByType_5000-10         	   26163	     45912 ns/op	  240029 B/op	      16 allocs/op
+BenchmarkLookupByInterface_100-10     	 2127723	       555.1 ns/op	    4496 B/op	       9 allocs/op
+BenchmarkLookupByInterface_1000-10    	  267342	      4465 ns/op	   35216 B/op	      12 allocs/op
+BenchmarkLookupByInterface_5000-10    	   25479	     47437 ns/op	  240027 B/op	      16 allocs/op
+BenchmarkLookupByName_100-10          	31554727	        37.01 ns/op	      48 B/op	       2 allocs/op
+BenchmarkLookupByName_1000-10         	32260918	        37.38 ns/op	      48 B/op	       2 allocs/op
+BenchmarkLookupByName_5000-10         	28349134	        42.22 ns/op	      48 B/op	       2 allocs/op
+PASS
+ok  	go.arpabet.com/glue	21.052s
+```
+
 ### Contributions
 
 If you find a bug or issue, please create a ticket.

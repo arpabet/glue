@@ -26,6 +26,12 @@ const (
 	SearchCurrentAndAllParents = -1 // all visible ancestors
 )
 
+// stubField describes an anonymous field that needs a stub set on each instance.
+type stubField struct {
+	fieldIndex int
+	fieldType  reflect.Type
+}
+
 type beanDef struct {
 	/**
 	Class of the pointer to the struct or interface
@@ -41,6 +47,11 @@ type beanDef struct {
 	anonymousFields []reflect.Type
 
 	/**
+	Anonymous fields that require stub initialization on each instance
+	*/
+	stubs []stubField
+
+	/**
 	Fields that are going to be injected
 	*/
 	fields []*injectionDef
@@ -49,6 +60,55 @@ type beanDef struct {
 	Properties that are going to be injected
 	*/
 	properties []*propInjectionDef
+}
+
+// globalBeanDefCache caches parsed beanDef by classPtr.
+// Since Go types are immutable, beanDef is safe to share across containers.
+var globalBeanDefCache sync.Map // key is reflect.Type (classPtr), value is *beanDef
+
+// cachedBeanDef returns a cached beanDef for the given classPtr, parsing it if needed.
+func cachedBeanDef(classPtr reflect.Type) (*beanDef, error) {
+	if bd, ok := globalBeanDefCache.Load(classPtr); ok {
+		return bd.(*beanDef), nil
+	}
+	bd, err := parseBeanDef(classPtr)
+	if err != nil {
+		return nil, err
+	}
+	actual, _ := globalBeanDefCache.LoadOrStore(classPtr, bd)
+	return actual.(*beanDef), nil
+}
+
+// applyStubs sets stub values on the instance's anonymous fields.
+func (t *beanDef) applyStubs(value reflect.Value) {
+	for _, s := range t.stubs {
+		var stub interface{}
+		switch s.fieldType {
+		case NamedBeanClass:
+			stub = newNamedBeanStub(t.classPtr.String())
+		case OrderedBeanClass:
+			stub = newOrderedBeanStub()
+		case ProfileBeanClass:
+			stub = newProfileBeanStub()
+		case ConditionalBeanClass:
+			stub = newConditionalBeanStub()
+		case InitializingBeanClass:
+			stub = newInitializingBeanStub(t.classPtr.String())
+		case ContextInitializingBeanClass:
+			stub = newContextInitializingBeanStub(t.classPtr.String())
+		case DisposableBeanClass:
+			stub = newDisposableBeanStub(t.classPtr.String())
+		case ContextDisposableBeanClass:
+			stub = newContextDisposableBeanStub(t.classPtr.String())
+		case FactoryBeanClass:
+			stub = newFactoryBeanStub(t.classPtr.String(), t.classPtr)
+		case ContextFactoryBeanClass:
+			stub = newContextFactoryBeanStub(t.classPtr.String(), t.classPtr)
+		default:
+			continue
+		}
+		value.Field(s.fieldIndex).Set(reflect.ValueOf(stub))
+	}
 }
 
 type bean struct {
@@ -200,12 +260,12 @@ type factory struct {
 	factoryClassPtr reflect.Type
 
 	/**
-		Factory bean interface
+	Factory bean interface
 	*/
 	factoryBean FactoryBean
 
 	/**
-		Context-aware factory bean interface
+	Context-aware factory bean interface
 	*/
 	contextFactoryBean ContextFactoryBean
 
@@ -308,14 +368,15 @@ type factoryDependency struct {
 
 /*
 *
-Investigate bean by using reflection
+parseBeanDef parses the type-level metadata from classPtr using reflection.
+This is pure type analysis with no instance-specific logic, so the result
+can be cached globally and reused across all instances of the same type.
 */
-func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
+func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 	var fields []*injectionDef
 	var properties []*propInjectionDef
 	var anonymousFields []reflect.Type
-	valuePtr := reflect.ValueOf(obj)
-	value := valuePtr.Elem()
+	var stubs []stubField
 	class := classPtr.Elem()
 	for j := 0; j < class.NumField(); j++ {
 		field := class.Field(j)
@@ -323,26 +384,17 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 		if field.Anonymous {
 			anonymousFields = append(anonymousFields, field.Type)
 			switch field.Type {
-			case NamedBeanClass:
-				stub := &namedBeanStub{name: classPtr.String()}
-				stubValuePtr := reflect.ValueOf(stub)
-				value.Field(j).Set(stubValuePtr)
-			case OrderedBeanClass:
-				stub := &orderedBeanStub{}
-				stubValuePtr := reflect.ValueOf(stub)
-				value.Field(j).Set(stubValuePtr)
-			case InitializingBeanClass:
-				stub := &initializingBeanStub{name: classPtr.String()}
-				stubValuePtr := reflect.ValueOf(stub)
-				value.Field(j).Set(stubValuePtr)
-			case DisposableBeanClass:
-				stub := &disposableBeanStub{name: classPtr.String()}
-				stubValuePtr := reflect.ValueOf(stub)
-				value.Field(j).Set(stubValuePtr)
-			case FactoryBeanClass:
-				stub := &factoryBeanStub{name: classPtr.String(), elemType: classPtr}
-				stubValuePtr := reflect.ValueOf(stub)
-				value.Field(j).Set(stubValuePtr)
+			case NamedBeanClass,
+				OrderedBeanClass,
+				ProfileBeanClass,
+				ConditionalBeanClass,
+				InitializingBeanClass,
+				ContextInitializingBeanClass,
+				DisposableBeanClass,
+				ContextDisposableBeanClass,
+				FactoryBeanClass,
+				ContextFactoryBeanClass:
+				stubs = append(stubs, stubField{fieldIndex: j, fieldType: field.Type})
 			case ContainerClass:
 				return nil, errors.Errorf("exposing by anonymous field '%s' in '%v' interface glue.Container is not allowed", field.Name, classPtr)
 			}
@@ -478,6 +530,29 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 			fields = append(fields, def)
 		}
 	}
+	return &beanDef{
+		classPtr:        classPtr,
+		anonymousFields: anonymousFields,
+		stubs:           stubs,
+		fields:          fields,
+		properties:      properties,
+	}, nil
+}
+
+/*
+*
+Investigate bean by using cached type-level metadata and instance-specific attributes.
+*/
+func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
+	bd, err := cachedBeanDef(classPtr)
+	if err != nil {
+		return nil, err
+	}
+
+	valuePtr := reflect.ValueOf(obj)
+	value := valuePtr.Elem()
+	bd.applyStubs(value)
+
 	name := classPtr.String()
 	var qualifier string
 	if namedBean, ok := obj.(NamedBean); ok {
@@ -492,7 +567,6 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 	}
 	primary := false
 	if primaryBean, ok := obj.(PrimaryBean); ok {
-
 		primary = primaryBean.IsPrimaryBean()
 	}
 	return &bean{
@@ -503,12 +577,7 @@ func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
 		primary:   primary,
 		obj:       obj,
 		valuePtr:  valuePtr,
-		beanDef: &beanDef{
-			classPtr:        classPtr,
-			anonymousFields: anonymousFields,
-			fields:          fields,
-			properties:      properties,
-		},
+		beanDef:   bd,
 		lifecycle: BeanCreated,
 	}, nil
 }

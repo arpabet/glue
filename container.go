@@ -58,11 +58,6 @@ type container struct {
 	properties Properties
 
 	/**
-	Cache bean descriptions for Inject calls in runtime
-	*/
-	runtimeCache sync.Map // key is reflect.Type (classPtr), value is *beanDef
-
-	/**
 	Guarantees that container would be closed once
 	*/
 	closeOnce sync.Once
@@ -756,6 +751,8 @@ func forEach(active map[string]struct{}, initialPos string, scan []interface{}, 
 /*
 	Profile expression syntax:
 
+	"" - no profiles
+	"*" - all profiles
 	"dev" — active when "dev" profile is active
 	"!prod" — active when "prod" profile is NOT active
 	"dev|staging" — active when either "dev" or "staging" is active
@@ -765,6 +762,9 @@ func forEach(active map[string]struct{}, initialPos string, scan []interface{}, 
 func isProfileActive(active map[string]struct{}, profileExpression string) bool {
 	profileExpression = strings.TrimSpace(profileExpression)
 	if profileExpression == "" {
+		return false
+	}
+	if profileExpression == "*" {
 		return true
 	}
 
@@ -923,27 +923,27 @@ func (t *container) Inject(obj interface{}) error {
 	if classPtr.Kind() != reflect.Ptr {
 		return errors.Errorf("non-pointer instances are not allowed, type %v", classPtr)
 	}
+	bd, err := cachedBeanDef(classPtr)
+	if err != nil {
+		return err
+	}
 	valuePtr := reflect.ValueOf(obj)
 	value := valuePtr.Elem()
-	if bd, err := t.cache(obj, classPtr); err != nil {
-		return err
-	} else {
-		for _, inject := range bd.fields {
-			impl := t.getBean(inject.fieldType)
-			if len(impl) == 0 {
-				if inject.optional {
-					continue
-				}
-				return errors.Errorf("implementation not found for field '%s' with type '%v'", inject.fieldName, inject.fieldType)
+	for _, inject := range bd.fields {
+		impl := t.getBean(inject.fieldType)
+		if len(impl) == 0 {
+			if inject.optional {
+				continue
 			}
-			if err := inject.inject(&value, impl); err != nil {
-				return err
-			}
+			return errors.Errorf("implementation not found for field '%s' with type '%v'", inject.fieldName, inject.fieldType)
 		}
-		for _, inject := range bd.properties {
-			if err := inject.inject(&value, t.properties); err != nil {
-				return err
-			}
+		if err := inject.inject(&value, impl); err != nil {
+			return err
+		}
+	}
+	for _, inject := range bd.properties {
+		if err := inject.inject(&value, t.properties); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -974,20 +974,6 @@ func (t *container) searchByNameInRepositoryRecursive(iface string) []beanlist {
 		level++
 	}
 	return candidates
-}
-
-// multi-threading safe
-func (t *container) cache(obj interface{}, classPtr reflect.Type) (*beanDef, error) {
-	if bd, ok := t.runtimeCache.Load(classPtr); ok {
-		return bd.(*beanDef), nil
-	} else {
-		b, err := investigate(obj, classPtr)
-		if err != nil {
-			return nil, err
-		}
-		t.runtimeCache.Store(classPtr, b.beanDef)
-		return b.beanDef, nil
-	}
 }
 
 func getStackInfo(stack []*bean, delim string) string {

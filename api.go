@@ -251,6 +251,30 @@ type Container interface {
 	String() string
 }
 
+var ProfileBeanClass = reflect.TypeOf((*ProfileBean)(nil)).Elem()
+
+/*
+	    ProfileBean is implemented by beans that should only be registered when specific profiles are active.
+
+		Default property for active profiles: glue.profiles.active
+
+		Profile expression syntax:
+
+		"" - no profiles
+		"*" - all profiles
+		"dev" — active when "dev" profile is active
+		"!prod" — active when "prod" profile is NOT active
+		"dev|staging" — active when either "dev" or "staging" is active
+		"dev&local" — active when both "dev" and "local" are active
+*/
+type ProfileBean interface {
+
+	/*
+		BeanProfile - returns the string that represents pattern of current profile where bean should be included in container
+	*/
+	BeanProfile() string // e.g., "dev", "!prod", "dev|staging"
+}
+
 var ConditionalBeanClass = reflect.TypeOf((*ConditionalBean)(nil)).Elem()
 
 /*
@@ -270,30 +294,10 @@ type ConditionalBean interface {
 	ShouldRegisterBean() bool
 }
 
-var ProfileBeanClass = reflect.TypeOf((*ProfileBean)(nil)).Elem()
+var ScannerClass = reflect.TypeOf((*Scanner)(nil)).Elem()
 
 /*
-	    ProfileBean is implemented by beans that should only be registered when specific profiles are active.
-
-		Default property for active profiles: glue.profiles.active
-
-		Profile expression syntax:
-
-		"dev" — active when "dev" profile is active
-		"!prod" — active when "prod" profile is NOT active
-		"dev|staging" — active when either "dev" or "staging" is active
-		"dev&local" — active when both "dev" and "local" are active
-*/
-type ProfileBean interface {
-
-	/*
-		BeanProfile - returns the string that represents pattern of current profile where bean should be included in container
-	*/
-	BeanProfile() string // e.g., "dev", "!prod", "dev|staging"
-}
-
-/*
-This interface used to provide pre-scanned instances in glue.New method.
+Scanner interface used to provide pre-scanned instances in glue.New method.
 When glue sees that instance implements Scanner interface, instead of adding
 instance itself to the container, glue it will call the method ScannerBeans() and
 add array of instances in to container.
@@ -305,18 +309,16 @@ Scanner made as a interface to have a state and application can load beans diffe
 depending on environment variables or other settings.
 */
 
-var ScannerClass = reflect.TypeOf((*Scanner)(nil)).Elem()
-
 type Scanner interface {
 
 	/*
-		Returns pre-scanned instances
+		ScannerBeans - returns pre-scanned instances
 	*/
 	ScannerBeans() []interface{}
 }
 
 /*
-	Interface that joins ProfileBean and Scanner
+	ProfileScanner - Interface that joins ProfileBean and Scanner
 */
 
 type ProfileScanner interface {
