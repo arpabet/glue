@@ -7,11 +7,13 @@ package glue_test
 
 import (
 	"context"
-	"github.com/stretchr/testify/require"
-	"go.arpabet.com/glue"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 )
 
 type someService struct {
@@ -269,4 +271,110 @@ func TestContextFactoryBean(t *testing.T) {
 	require.Equal(t, 1, len(b))
 	require.Same(t, ctx, f.received)
 	require.Equal(t, "ctx-value", f.received.Value("factory-test"))
+}
+
+// --- Test: FactoryBean-produced bean lifecycle (Spring-compatible behavior) ---
+//
+// Per Spring Framework conventions, the container manages the FactoryBean's own
+// lifecycle (PostConstruct/Destroy), but does NOT call lifecycle hooks on the
+// object produced by FactoryBean.Object(). The produced bean is transient from
+// the container's perspective — if it needs initialization or cleanup, the
+// FactoryBean itself is responsible for managing that.
+
+// lifecycleProducedBean is a bean produced by a FactoryBean that implements
+// both InitializingBean and DisposableBean.
+type lifecycleProducedBean struct {
+	postConstructCalled atomic.Int32
+	destroyCalled       atomic.Int32
+}
+
+func (t *lifecycleProducedBean) PostConstruct() error {
+	t.postConstructCalled.Add(1)
+	return nil
+}
+
+func (t *lifecycleProducedBean) Destroy() error {
+	t.destroyCalled.Add(1)
+	return nil
+}
+
+var lifecycleProducedBeanClass = reflect.TypeOf((*lifecycleProducedBean)(nil))
+
+// lifecycleFactory is a FactoryBean that produces lifecycleProducedBean instances.
+// The factory itself also implements InitializingBean and DisposableBean to verify
+// the container DOES manage the factory's own lifecycle.
+type lifecycleFactory struct {
+	glue.FactoryBean
+	produced                *lifecycleProducedBean
+	factoryPostConstructed  atomic.Int32
+	factoryDestroyed        atomic.Int32
+}
+
+func (t *lifecycleFactory) PostConstruct() error {
+	t.factoryPostConstructed.Add(1)
+	return nil
+}
+
+func (t *lifecycleFactory) Destroy() error {
+	t.factoryDestroyed.Add(1)
+	return nil
+}
+
+func (t *lifecycleFactory) Object() (interface{}, error) {
+	t.produced = &lifecycleProducedBean{}
+	return t.produced, nil
+}
+
+func (t *lifecycleFactory) ObjectType() reflect.Type {
+	return lifecycleProducedBeanClass
+}
+
+func (t *lifecycleFactory) ObjectName() string {
+	return ""
+}
+
+func (t *lifecycleFactory) Singleton() bool {
+	return true
+}
+
+// TestFactoryBeanProducedBeanLifecycle verifies that the container does NOT call
+// PostConstruct or Destroy on the object produced by a FactoryBean — matching
+// Spring Framework behavior where the produced bean's lifecycle is the
+// responsibility of the FactoryBean, not the container.
+func TestFactoryBeanProducedBeanLifecycle(t *testing.T) {
+
+	f := &lifecycleFactory{}
+
+	// Need a holder to trigger factory bean construction
+	holder := &struct {
+		Produced *lifecycleProducedBean `inject:""`
+	}{}
+
+	ctx, err := glue.New(f, holder)
+	require.NoError(t, err)
+
+	// Verify the produced bean was created
+	require.NotNil(t, holder.Produced)
+	require.NotNil(t, f.produced)
+	require.Same(t, f.produced, holder.Produced)
+
+	// Factory's own PostConstruct SHOULD have been called
+	require.Equal(t, int32(1), f.factoryPostConstructed.Load(),
+		"container should call PostConstruct on the FactoryBean itself")
+
+	// Produced bean's PostConstruct should NOT have been called by the container
+	require.Equal(t, int32(0), holder.Produced.postConstructCalled.Load(),
+		"container should NOT call PostConstruct on the FactoryBean-produced bean")
+
+	// Close the container
+	err = ctx.Close()
+	require.NoError(t, err)
+
+	// Factory's own Destroy SHOULD have been called
+	require.Equal(t, int32(1), f.factoryDestroyed.Load(),
+		"container should call Destroy on the FactoryBean itself")
+
+	// Produced bean's Destroy should NOT have been called by the container
+	require.Equal(t, int32(0), holder.Produced.destroyCalled.Load(),
+		"container should NOT call Destroy on the FactoryBean-produced bean")
 }
