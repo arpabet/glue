@@ -8,6 +8,16 @@ All injections happen on runtime and took O(n*m) complexity, where n - number of
 In golang we have to check each interface with each instance to know if they are compatible. 
 All injectable fields must have tag `inject` and be public.
 
+### Documentation
+
+Long-form documentation is organized under `docs/`:
+* [Documentation Index](docs/README.md)
+* [Getting Started](docs/01-getting-started.md)
+* [Lifecycle and Context](docs/02-lifecycle-and-context.md)
+* [Selection, Profiles, and Conditions](docs/03-selection-profiles-conditions.md)
+* [Factories and Scopes](docs/04-factories-and-scopes.md)
+* [Hierarchy and Search](docs/05-hierarchy-and-search.md)
+
 ### Usage
 
 Dependency Injection framework for complex applications written in Golang.
@@ -331,6 +341,48 @@ Corner cases:
 * `ContextFactoryBean` is preferred over legacy `FactoryBean` when a factory implements the context-aware interface.
 * Runtime `container.Inject(...)` can still materialize factory products; in that path Glue uses `context.Background()`.
 * Factory-produced objects are still treated as produced instances, not full managed beans. They do not automatically receive `value` property injection, `PostConstruct(ctx)`, or `Destroy(ctx)`.
+
+### Scopes
+
+Glue supports three bean scopes:
+* `singleton`: the default scope, one instance per container.
+* `prototype`: a new instance is created on every provider call.
+* `request`: one instance is created per `RequestScope` attached to `context.Context`.
+
+Singleton example:
+```
+type consumer struct {
+    Storage *storageImpl `inject:""`
+}
+```
+
+Prototype example:
+```
+type workerConsumer struct {
+    NewWorker func() (*worker, error) `inject:"scope=prototype"`
+}
+```
+
+Request example:
+```
+type sessionConsumer struct {
+    GetSession func(context.Context) (*session, error) `inject:"scope=request"`
+}
+
+scope := glue.NewRequestScope()
+reqCtx := glue.WithRequestScope(context.Background(), scope)
+
+session, err := consumer.GetSession(reqCtx)
+```
+
+Scope rules:
+* `scope=prototype` and `scope=request` require function fields. Glue generates provider functions for those fields.
+* `prototype` supports `func() (T, error)` and `func(context.Context) (T, error)`.
+* `request` requires `func(context.Context) (T, error)` because request scope is read from the context.
+* Scoped instances can be created from `FactoryBean`, `ContextFactoryBean`, or classical beans that implement `ScopedBean`.
+* Classical scoped beans still receive field injection and `PostConstruct` when a new scoped instance is created.
+
+Detailed scope documentation and examples are in [docs/04-factories-and-scopes.md](docs/04-factories-and-scopes.md).
 
 ### Lazy fields
 
