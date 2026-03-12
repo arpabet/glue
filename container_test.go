@@ -33,7 +33,7 @@ func TestCreateNil(t *testing.T) {
 func TestCreateNilArray(t *testing.T) {
 
 	// skip all nil beans
-	ctx, err := glue.New([]interface{}{nil, nil})
+	ctx, err := glue.New([]any{nil, nil})
 
 	require.NoError(t, err)
 	require.NotNil(t, ctx)
@@ -263,7 +263,7 @@ func TestCreateArray(t *testing.T) {
 
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
-	var b []interface{}
+	var b []any
 	b = append(b, logger, &storageImpl{}, &configServiceImpl{})
 
 	ctx, err := glue.New(
@@ -281,11 +281,11 @@ func TestCreateArray(t *testing.T) {
 }
 
 type scannerImpl struct {
-	arr []interface{}
+	arr []any
 }
 
 // implements glue.Scanner
-func (t scannerImpl) ScannerBeans() []interface{} {
+func (t scannerImpl) ScannerBeans() []any {
 	return t.arr
 }
 
@@ -294,7 +294,7 @@ func TestCreateScanner(t *testing.T) {
 	logger := log.New(os.Stderr, "beans: ", log.LstdFlags)
 
 	scanner := scannerImpl{
-		arr: []interface{}{logger, &storageImpl{}, &configServiceImpl{}},
+		arr: []any{logger, &storageImpl{}, &configServiceImpl{}},
 	}
 
 	ctx, err := glue.New(

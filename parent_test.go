@@ -255,7 +255,7 @@ func TestChildren(t *testing.T) {
 	coreBean := &coreBean{}
 	serviceBean := &serviceBean{testing: t}
 
-	root := []interface{}{
+	root := []any{
 		coreBean,
 		&implComponent{value: "fromParent", order: 1},
 		&implElement{value: "parent", order: 2},

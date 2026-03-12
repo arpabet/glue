@@ -78,20 +78,20 @@ func (t *properties) Priority() int {
 	return t.priority
 }
 
-func (t *properties) LoadMap(source map[string]interface{}) {
+func (t *properties) LoadMap(source map[string]any) {
 	t.Lock()
 	defer t.Unlock()
 	t.loadMapRec(make([]byte, 0, 100), source)
 }
 
-func (t *properties) loadMapRec(stack []byte, m map[string]interface{}) {
+func (t *properties) loadMapRec(stack []byte, m map[string]any) {
 	for k, v := range m {
 		n := len(stack)
 		if n > 0 {
 			stack = append(stack, '.')
 		}
 		stack = append(stack, []byte(k)...)
-		if next, ok := v.(map[string]interface{}); ok {
+		if next, ok := v.(map[string]any); ok {
 			t.loadMapRec(stack, next)
 		} else {
 			t.store[string(stack)] = fmt.Sprint(v)

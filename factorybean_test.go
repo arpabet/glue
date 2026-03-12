@@ -54,7 +54,7 @@ type factoryBeanExample struct {
 	SomeService *someService `inject:""`
 }
 
-func (t *factoryBeanExample) Object() (interface{}, error) {
+func (t *factoryBeanExample) Object() (any, error) {
 	require.NotNil(t.testing, t.SomeService)
 	someProperty := t.SomeService.GetProperty()
 	println("Construct beanConstructed after ", someProperty)
@@ -82,7 +82,7 @@ type repeatedFactoryBeanExample struct {
 	testing *testing.T
 }
 
-func (t *repeatedFactoryBeanExample) Object() (interface{}, error) {
+func (t *repeatedFactoryBeanExample) Object() (any, error) {
 	return &beanConstructed{testing: t.testing}, nil
 }
 
@@ -200,7 +200,7 @@ type factoryBeanImpl struct {
 	SomeService SomeService `inject:""`
 }
 
-func (t *factoryBeanImpl) Object() (interface{}, error) {
+func (t *factoryBeanImpl) Object() (any, error) {
 	require.NotNil(t.testing, t.SomeService)
 	someProperty := t.SomeService.GetProperty()
 	println("Construct beanConstructedImpl after ", someProperty)
@@ -242,7 +242,7 @@ type contextFactoryBeanExample struct {
 	received context.Context
 }
 
-func (t *contextFactoryBeanExample) Object(ctx context.Context) (interface{}, error) {
+func (t *contextFactoryBeanExample) Object(ctx context.Context) (any, error) {
 	t.received = ctx
 	return &beanConstructed{}, nil
 }
@@ -320,7 +320,7 @@ func (t *lifecycleFactory) Destroy() error {
 	return nil
 }
 
-func (t *lifecycleFactory) Object() (interface{}, error) {
+func (t *lifecycleFactory) Object() (any, error) {
 	t.produced = &lifecycleProducedBean{}
 	return t.produced, nil
 }

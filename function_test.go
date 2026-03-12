@@ -44,11 +44,11 @@ func TestPrimitiveFunctions(t *testing.T) {
 
 }
 
-type ClientBeans func() []interface{}
+type ClientBeans func() []any
 
 var ClientBeansClass = reflect.TypeOf((ClientBeans)(nil))
 
-type ServerBeans func() []interface{}
+type ServerBeans func() []any
 
 var ServerBeansClass = reflect.TypeOf((ServerBeans)(nil))
 
@@ -64,12 +64,12 @@ func TestFunctions(t *testing.T) {
 
 	clientBeanInstance := &struct{}{}
 
-	clientBeans := ClientBeans(func() []interface{} {
+	clientBeans := ClientBeans(func() []any {
 		println("clientBeans call")
-		return []interface{}{clientBeanInstance}
+		return []any{clientBeanInstance}
 	})
 
-	serverBeans := ServerBeans(func() []interface{} {
+	serverBeans := ServerBeans(func() []any {
 		println("serverBeans call")
 		return nil
 	})

@@ -74,7 +74,7 @@ type Bean interface {
 	/*
 		Returns initialized object of the bean
 	*/
-	Object() interface{}
+	Object() any
 
 	/*
 		Returns factory bean of exist only beans created by FactoryBean interface
@@ -137,17 +137,17 @@ type Container interface {
 	/*
 		Extend - creates a new container on top of beans from the current container
 	*/
-	Extend(scan ...interface{}) (Container, error)
+	Extend(scan ...any) (Container, error)
 
 	/*
 		ExtendWithContext - creates a new container on top of beans from the current container with context
 	*/
-	ExtendWithContext(ctx context.Context, scan ...interface{}) (Container, error)
+	ExtendWithContext(ctx context.Context, scan ...any) (Container, error)
 
 	/*
 		ExtendWithOptions - creates a new container on top of beans from the current container with options
 	*/
-	ExtendWithOptions(options []ContainerOption, scan ...interface{}) (Container, error)
+	ExtendWithOptions(options []ContainerOption, scan ...any) (Container, error)
 
 	/*
 		Children - Returns list of ctx container inside the current container only
@@ -232,7 +232,7 @@ type Container interface {
 			ctx.Inject(rp)
 			required.NotNil(t, rp.UserService)
 	*/
-	Inject(interface{}) error
+	Inject(any) error
 
 	/*
 		Returns resource and true if found
@@ -315,7 +315,7 @@ type Scanner interface {
 	/*
 		ScannerBeans - returns pre-scanned instances
 	*/
-	ScannerBeans() []interface{}
+	ScannerBeans() []any
 }
 
 /*
@@ -329,19 +329,19 @@ type ProfileScanner interface {
 
 type profileScanner struct {
 	profile string
-	beans   []interface{}
+	beans   []any
 }
 
 func (t *profileScanner) BeanProfile() string {
 	return t.profile
 }
 
-func (t *profileScanner) ScannerBeans() []interface{} {
+func (t *profileScanner) ScannerBeans() []any {
 	return t.beans
 }
 
 // IfProfile Shortcut method for container creation
-func IfProfile(profile string, scan ...interface{}) ProfileScanner {
+func IfProfile(profile string, scan ...any) ProfileScanner {
 	return &profileScanner{profile: profile, beans: scan}
 }
 
@@ -349,7 +349,7 @@ func IfProfile(profile string, scan ...interface{}) ProfileScanner {
 ChildContainer is using to skip and delay initialization of the group of beans until application really needs it.
 It gives ability to declare hierarchy of container with lazy loading on demand.
 
-Use method glue.Child(name string, scan... interface{}) to initialize this special bean.
+Use method glue.Child(name string, scan... any) to initialize this special bean.
 */
 
 var ChildContainerClass = reflect.TypeOf((*ChildContainer)(nil)).Elem()
@@ -398,7 +398,7 @@ type FactoryBean interface {
 	/*
 		returns an object produced by the factory, and this is the object that will be used in container, but not going to be a bean
 	*/
-	Object() (interface{}, error)
+	Object() (any, error)
 
 	/*
 		returns the type of object that this FactoryBean produces
@@ -423,7 +423,7 @@ type ContextFactoryBean interface {
 	/*
 		returns an object produced by the factory using the current container construction context
 	*/
-	Object(ctx context.Context) (interface{}, error)
+	Object(ctx context.Context) (any, error)
 
 	/*
 		returns the type of object that this FactoryBean produces
@@ -633,7 +633,7 @@ type PropertySource struct {
 	/*
 		Map of properties
 	*/
-	Map map[string]interface{}
+	Map map[string]any
 }
 
 var FilePropertySourceClass = reflect.TypeOf((*FilePropertySource)(nil)).Elem()
@@ -642,7 +642,7 @@ type FilePropertySource string
 
 var MapPropertySourceClass = reflect.TypeOf((*MapPropertySource)(nil)).Elem()
 
-type MapPropertySource map[string]interface{}
+type MapPropertySource map[string]any
 
 var PropertyResolverClass = reflect.TypeOf((*PropertyResolver)(nil))
 
@@ -688,7 +688,7 @@ type Properties interface {
 	/*
 		Loads properties from map
 	*/
-	LoadMap(source map[string]interface{})
+	LoadMap(source map[string]any)
 
 	/*
 		Loads properties from input stream
@@ -807,13 +807,13 @@ resolve the RequestScope from the context and cache instances within it.
 
 type RequestScope struct {
 	mu        sync.Mutex
-	instances map[reflect.Type]interface{}
+	instances map[reflect.Type]any
 }
 
 // NewRequestScope creates a new empty request scope.
 func NewRequestScope() *RequestScope {
 	return &RequestScope{
-		instances: make(map[reflect.Type]interface{}),
+		instances: make(map[reflect.Type]any),
 	}
 }
 
@@ -831,7 +831,7 @@ func RequestScopeFromContext(ctx context.Context) (*RequestScope, bool) {
 }
 
 // getOrCreate returns the cached instance for the given type, or calls create to make one.
-func (rs *RequestScope) getOrCreate(typ reflect.Type, create func() (interface{}, error)) (interface{}, error) {
+func (rs *RequestScope) getOrCreate(typ reflect.Type, create func() (any, error)) (any, error) {
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
 	if inst, ok := rs.instances[typ]; ok {

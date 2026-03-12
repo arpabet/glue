@@ -19,7 +19,7 @@ import (
 	"go.arpabet.com/glue"
 )
 
-var propertiesMap = map[string]interface{}{
+var propertiesMap = map[string]any{
 	"example.str":      "string\n",
 	"example.int":      123,
 	"example.bool":     true,
@@ -152,7 +152,7 @@ func (t assetFile) IsDir() bool {
 	return false
 }
 
-func (t assetFile) Sys() interface{} {
+func (t assetFile) Sys() any {
 	return t
 }
 

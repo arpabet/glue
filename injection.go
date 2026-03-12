@@ -675,7 +675,7 @@ func (t *injectionDef) injectScopeProvider(field reflect.Value, scopedBean *bean
 			if !ok {
 				return []reflect.Value{zeroReturn, reflect.ValueOf(fmt.Errorf("no RequestScope found in context for scoped bean '%v'", returnType))}
 			}
-			obj, err := scope.getOrCreate(returnType, func() (interface{}, error) {
+			obj, err := scope.getOrCreate(returnType, func() (any, error) {
 				return createScopedInstance(ctx, ctn, scopedBean)
 			})
 			if err != nil {
@@ -691,7 +691,7 @@ func (t *injectionDef) injectScopeProvider(field reflect.Value, scopedBean *bean
 // For factory beans it delegates to the factory (supporting both FactoryBean and ContextFactoryBean).
 // For non-factory beans it allocates a new struct, applies stubs, injects fields and properties
 // via the container, and runs PostConstruct (with or without context).
-func createScopedInstance(ctx context.Context, ctn *container, b *bean) (interface{}, error) {
+func createScopedInstance(ctx context.Context, ctn *container, b *bean) (any, error) {
 	if b.beenFactory != nil {
 		instance, _, err := b.beenFactory.ctor(ctx)
 		if err != nil {
@@ -728,7 +728,7 @@ func createScopedInstance(ctx context.Context, ctn *container, b *bean) (interfa
 }
 
 func convertProperty(s string, t reflect.Type, timeFormat string) (val reflect.Value, err error) {
-	var v interface{}
+	var v any
 
 	switch {
 

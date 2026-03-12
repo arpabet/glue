@@ -45,8 +45,8 @@ type benchServiceHolder struct {
 }
 
 // generatePointerBeans creates n unique pointer beans for container registration.
-func generatePointerBeans(n int) []interface{} {
-	beans := make([]interface{}, n)
+func generatePointerBeans(n int) []any {
+	beans := make([]any, n)
 	for i := 0; i < n; i++ {
 		beans[i] = &benchBean{Value: i}
 	}
@@ -55,8 +55,8 @@ func generatePointerBeans(n int) []interface{} {
 
 // generateServiceBeans creates n unique named service beans implementing benchService,
 // plus a holder to trigger registry registration.
-func generateServiceBeans(n int) []interface{} {
-	beans := make([]interface{}, n+1)
+func generateServiceBeans(n int) []any {
+	beans := make([]any, n+1)
 	for i := 0; i < n; i++ {
 		beans[i] = &benchServiceImpl{id: i}
 	}

@@ -90,7 +90,7 @@ func (t *configBean) PostConstruct() error {
 func TestReload_PropertyReResolution(t *testing.T) {
 	b := &configBean{}
 	ctn, err := glue.New(
-		&glue.PropertySource{Map: map[string]interface{}{"db.url": "pg://old"}},
+		&glue.PropertySource{Map: map[string]any{"db.url": "pg://old"}},
 		b,
 	)
 	require.NoError(t, err)
@@ -123,7 +123,7 @@ func TestReload_PropertyReResolution(t *testing.T) {
 func TestReloadWithContext_PropertyReResolution(t *testing.T) {
 	b := &contextAwareConfigBean{}
 	ctn, err := glue.New(
-		&glue.PropertySource{Map: map[string]interface{}{"app.name": "v1"}},
+		&glue.PropertySource{Map: map[string]any{"app.name": "v1"}},
 		b,
 	)
 	require.NoError(t, err)
@@ -155,7 +155,7 @@ func (t *contextAwareConfigBean) PostConstruct(ctx context.Context) error {
 func TestReload_DefaultUsedWhenPropertyRemoved(t *testing.T) {
 	b := &configBean{}
 	ctn, err := glue.New(
-		&glue.PropertySource{Map: map[string]interface{}{"db.url": "pg://set"}},
+		&glue.PropertySource{Map: map[string]any{"db.url": "pg://set"}},
 		b,
 	)
 	require.NoError(t, err)

@@ -30,7 +30,7 @@ type protoWorkerFactory struct {
 	glue.FactoryBean
 }
 
-func (t *protoWorkerFactory) Object() (interface{}, error) {
+func (t *protoWorkerFactory) Object() (any, error) {
 	return &protoWorker{ID: atomic.AddInt32(&protoWorkerIDSeq, 1)}, nil
 }
 
@@ -118,7 +118,7 @@ type requestSessionFactory struct {
 	glue.FactoryBean
 }
 
-func (t *requestSessionFactory) Object() (interface{}, error) {
+func (t *requestSessionFactory) Object() (any, error) {
 	id := atomic.AddInt32(&requestSessionSeq, 1)
 	return &requestSession{UserID: "user-" + string(rune('0'+id))}, nil
 }
@@ -270,7 +270,7 @@ type workerFactory struct {
 
 var workerSeq int32
 
-func (t *workerFactory) Object() (interface{}, error) {
+func (t *workerFactory) Object() (any, error) {
 	return &workerImpl{id: atomic.AddInt32(&workerSeq, 1)}, nil
 }
 
@@ -460,7 +460,7 @@ type ctxSessionFactory struct {
 
 type traceKey struct{}
 
-func (t *ctxSessionFactory) Object(ctx context.Context) (interface{}, error) {
+func (t *ctxSessionFactory) Object(ctx context.Context) (any, error) {
 	traceID, _ := ctx.Value(traceKey{}).(string)
 	return &ctxRequestSession{TraceID: traceID}, nil
 }

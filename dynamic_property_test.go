@@ -29,7 +29,7 @@ type dynService struct {
 	GetConn func(context.Context) (string, error) `value:"db.conn,default=mem://"`
 }
 
-func newDynContext(t *testing.T, props map[string]interface{}) (glue.Container, *dynService) {
+func newDynContext(t *testing.T, props map[string]any) (glue.Container, *dynService) {
 	t.Helper()
 	svc := &dynService{}
 	ctx, err := glue.New(
@@ -44,7 +44,7 @@ func newDynContext(t *testing.T, props map[string]interface{}) (glue.Container, 
 // --- tests ---
 
 func TestDynamicProperty_StaticStillWorks(t *testing.T) {
-	_, svc := newDynContext(t, map[string]interface{}{"app.port": "9090"})
+	_, svc := newDynContext(t, map[string]any{"app.port": "9090"})
 	require.Equal(t, 9090, svc.Port)
 }
 
@@ -54,7 +54,7 @@ func TestDynamicProperty_FuncT_Default(t *testing.T) {
 }
 
 func TestDynamicProperty_FuncT_FromProps(t *testing.T) {
-	_, svc := newDynContext(t, map[string]interface{}{"app.host": "example.com"})
+	_, svc := newDynContext(t, map[string]any{"app.host": "example.com"})
 	require.Equal(t, "example.com", svc.GetHost())
 }
 
@@ -72,7 +72,7 @@ func TestDynamicProperty_FuncError_Missing(t *testing.T) {
 }
 
 func TestDynamicProperty_FuncError_Present(t *testing.T) {
-	_, svc := newDynContext(t, map[string]interface{}{"db.password": "***"})
+	_, svc := newDynContext(t, map[string]any{"db.password": "***"})
 	val, err := svc.GetSecret()
 	require.NoError(t, err)
 	require.Equal(t, "***", val)
@@ -86,7 +86,7 @@ func TestDynamicProperty_FuncContext_Default(t *testing.T) {
 }
 
 func TestDynamicProperty_FuncContext_FromProps(t *testing.T) {
-	_, svc := newDynContext(t, map[string]interface{}{"db.conn": "postgres://localhost/mydb"})
+	_, svc := newDynContext(t, map[string]any{"db.conn": "postgres://localhost/mydb"})
 	val, err := svc.GetConn(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, "postgres://localhost/mydb", val)

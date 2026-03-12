@@ -139,7 +139,7 @@ func newFactoryBeanStub(name string, elemType reflect.Type) FactoryBean {
 	return &factoryBeanStub{name: name, elemType: elemType}
 }
 
-func (t *factoryBeanStub) Object() (interface{}, error) {
+func (t *factoryBeanStub) Object() (any, error) {
 	return nil, errors.Errorf("bean '%s' does not implement Object method, but has anonymous field FactoryBean", t.name)
 }
 
@@ -164,7 +164,7 @@ func newContextFactoryBeanStub(name string, elemType reflect.Type) ContextFactor
 	return &contextFactoryBeanStub{name: name, elemType: elemType}
 }
 
-func (t *contextFactoryBeanStub) Object(context.Context) (interface{}, error) {
+func (t *contextFactoryBeanStub) Object(context.Context) (any, error) {
 	return nil, errors.Errorf("bean '%s' does not implement Object(ctx) method, but has anonymous field ContextFactoryBean", t.name)
 }
 

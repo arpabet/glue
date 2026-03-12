@@ -63,26 +63,26 @@ type container struct {
 	closeOnce sync.Once
 }
 
-func New(scan ...interface{}) (Container, error) {
+func New(scan ...any) (Container, error) {
 	return NewWithOptions(nil, scan...)
 }
 
-func NewWithProfiles(activeProfiles []string, scan ...interface{}) (Container, error) {
+func NewWithProfiles(activeProfiles []string, scan ...any) (Container, error) {
 	return NewWithOptions([]ContainerOption{WithProfiles(activeProfiles...)}, scan...)
 }
 
-func NewWithContext(ctx context.Context, scan ...interface{}) (Container, error) {
+func NewWithContext(ctx context.Context, scan ...any) (Container, error) {
 	return NewWithOptions([]ContainerOption{WithContext(ctx)}, scan...)
 }
 
-func NewWithProperties(ctx context.Context, properties Properties, scan ...interface{}) (Container, error) {
+func NewWithProperties(ctx context.Context, properties Properties, scan ...any) (Container, error) {
 	return NewWithOptions([]ContainerOption{
 		WithContext(ctx),
 		WithProperties(properties),
 	}, scan...)
 }
 
-func NewWithOptions(options []ContainerOption, scan ...interface{}) (Container, error) {
+func NewWithOptions(options []ContainerOption, scan ...any) (Container, error) {
 	return createContainer(nil, buildContainerOptions(options), scan)
 }
 
@@ -112,15 +112,15 @@ func buildContainerOptions(options []ContainerOption) ContainerOptions {
 	return opts
 }
 
-func (t *container) Extend(scan ...interface{}) (Container, error) {
+func (t *container) Extend(scan ...any) (Container, error) {
 	return t.ExtendWithOptions(nil, scan...)
 }
 
-func (t *container) ExtendWithContext(ctx context.Context, scan ...interface{}) (Container, error) {
+func (t *container) ExtendWithContext(ctx context.Context, scan ...any) (Container, error) {
 	return t.ExtendWithOptions([]ContainerOption{WithContext(ctx)}, scan...)
 }
 
-func (t *container) ExtendWithOptions(options []ContainerOption, scan ...interface{}) (Container, error) {
+func (t *container) ExtendWithOptions(options []ContainerOption, scan ...any) (Container, error) {
 
 	properties := NewProperties()
 	properties.Extend(t.properties)
@@ -169,7 +169,7 @@ func getActiveProfiles(properties Properties) []string {
 	return profiles
 }
 
-func createContainer(parent *container, options ContainerOptions, scan []interface{}) (ctn *container, err error) {
+func createContainer(parent *container, options ContainerOptions, scan []any) (ctn *container, err error) {
 
 	core := make(map[reflect.Type][]*bean)
 	pointers := make(map[reflect.Type][]*injection)
@@ -226,7 +226,7 @@ func createContainer(parent *container, options ContainerOptions, scan []interfa
 	core[propertiesBean.beanDef.classPtr] = []*bean{propertiesBean}
 
 	// scan
-	err = forEach(active, "", scan, func(pos string, obj interface{}) (err error) {
+	err = forEach(active, "", scan, func(pos string, obj any) (err error) {
 
 		var resolver bool
 
@@ -639,7 +639,7 @@ func (t *container) loadPropertiesFromFile(filePath string, file io.Reader) erro
 
 	if strings.HasSuffix(filePath, ".yaml") || strings.HasSuffix(filePath, ".yml") {
 
-		holder := make(map[string]interface{})
+		holder := make(map[string]any)
 		if err := yaml.NewDecoder(file).Decode(holder); err != nil {
 			return errors.Errorf("failed to load properties form yaml file '%s', %v", filePath, err)
 		}
@@ -652,7 +652,7 @@ func (t *container) loadPropertiesFromFile(filePath string, file io.Reader) erro
 		if err != nil {
 			return errors.Errorf("failed to read json file '%s', %v", filePath, err)
 		}
-		holder := make(map[string]interface{})
+		holder := make(map[string]any)
 		if err := json.Unmarshal(data, &holder); err != nil {
 			return errors.Errorf("failed to parse json file '%s', %v", filePath, err)
 		}
@@ -753,7 +753,7 @@ func registerBean(registry map[reflect.Type][]*bean, classPtr reflect.Type, bean
 	registry[classPtr] = append(registry[classPtr], bean)
 }
 
-func forEach(active map[string]struct{}, initialPos string, scan []interface{}, cb func(i string, obj interface{}) error) error {
+func forEach(active map[string]struct{}, initialPos string, scan []any, cb func(i string, obj any) error) error {
 	// Use a map to track visited objects by their pointer address
 	visited := make(map[uintptr]bool)
 
@@ -822,7 +822,7 @@ func isProfileActive(active map[string]struct{}, profileExpression string) bool 
 	return false
 }
 
-func forEachRecursive(active map[string]struct{}, initialPos string, scan []interface{}, cb func(i string, obj interface{}) error, visited map[uintptr]bool) error {
+func forEachRecursive(active map[string]struct{}, initialPos string, scan []any, cb func(i string, obj any) error, visited map[uintptr]bool) error {
 	for j, item := range scan {
 
 		if item == nil {
@@ -867,11 +867,11 @@ func forEachRecursive(active map[string]struct{}, initialPos string, scan []inte
 			if err := forEachRecursive(active, pos, obj.ScannerBeans(), cb, visited); err != nil {
 				return err
 			}
-		case []interface{}:
+		case []any:
 			if err := forEachRecursive(active, pos, obj, cb, visited); err != nil {
 				return err
 			}
-		case interface{}:
+		case any:
 			if err := cb(pos, obj); err != nil {
 				return errors.Errorf("object '%v' error, %v", reflect.ValueOf(item).Type(), err)
 			}
@@ -883,7 +883,7 @@ func forEachRecursive(active map[string]struct{}, initialPos string, scan []inte
 }
 
 // Helper function to check if an object is a pointer or interface that can be tracked
-func isPointer(obj interface{}) bool {
+func isPointer(obj any) bool {
 	if obj == nil {
 		return false
 	}
@@ -928,7 +928,7 @@ func (t *container) Lookup(iface string, level int) []Bean {
 	return beanList
 }
 
-func (t *container) Inject(obj interface{}) error {
+func (t *container) Inject(obj any) error {
 	if obj == nil {
 		return errors.New("null obj is are not allowed")
 	}
@@ -1384,7 +1384,7 @@ func (t *container) String() string {
 
 type childContext struct {
 	name string
-	scan []interface{}
+	scan []any
 
 	Parent Container `inject:""`
 
@@ -1399,7 +1399,7 @@ type childContext struct {
 Defines ctx container inside parent container
 */
 
-func Child(name string, scan ...interface{}) ChildContainer {
+func Child(name string, scan ...any) ChildContainer {
 	return &childContext{name: name, scan: scan}
 }
 

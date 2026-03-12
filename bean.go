@@ -82,7 +82,7 @@ func cachedBeanDef(classPtr reflect.Type) (*beanDef, error) {
 // applyStubs sets stub values on the instance's anonymous fields.
 func (t *beanDef) applyStubs(value reflect.Value) {
 	for _, s := range t.stubs {
-		var stub interface{}
+		var stub any
 		switch s.fieldType {
 		case NamedBeanClass:
 			stub = newNamedBeanStub(t.classPtr.String())
@@ -143,7 +143,7 @@ type bean struct {
 	/**
 	Instance to the bean, could be empty if beenFactory exist
 	*/
-	obj interface{}
+	obj any
 
 	/**
 	Reflect instance to the pointer or interface of the bean, could be empty if beenFactory exist
@@ -218,7 +218,7 @@ func (t *bean) Implements(ifaceType reflect.Type) bool {
 	return t.beanDef.implements(ifaceType)
 }
 
-func (t *bean) Object() interface{} {
+func (t *bean) Object() any {
 	return t.obj
 }
 
@@ -254,7 +254,7 @@ type factory struct {
 	/**
 	Instance to the factory bean
 	*/
-	factoryObj interface{}
+	factoryObj any
 
 	/**
 	Factory bean type
@@ -332,7 +332,7 @@ func (t *factory) ctor(ctx context.Context) (*bean, bool, error) {
 	}
 
 	var (
-		obj interface{}
+		obj any
 		err error
 	)
 	if contextFactoryBean, ok := t.factoryObj.(ContextFactoryBean); ok {
@@ -587,7 +587,7 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 *
 Investigate bean by using cached type-level metadata and instance-specific attributes.
 */
-func investigate(obj interface{}, classPtr reflect.Type) (*bean, error) {
+func investigate(obj any, classPtr reflect.Type) (*bean, error) {
 	bd, err := cachedBeanDef(classPtr)
 	if err != nil {
 		return nil, err

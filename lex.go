@@ -109,7 +109,7 @@ func (t *lexer) acceptRun(valid string) {
 	t.backup()
 }
 
-func (t *lexer) errorf(format string, args ...interface{}) stateFn {
+func (t *lexer) errorf(format string, args ...any) stateFn {
 	i := item{itemError, t.start, fmt.Sprintf(format, args...)}
 	t.items = append(t.items, i)
 	return nil
