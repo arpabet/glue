@@ -8,3 +8,5 @@ Chapters:
 * [03 Selection, Profiles, and Conditions](03-selection-profiles-conditions.md)
 * [04 Factories and Scopes](04-factories-and-scopes.md)
 * [05 Hierarchy and Search](05-hierarchy-and-search.md)
+* [06 Properties and Resources](06-properties-and-resources.md)
+* [07 Build and Benchmark](07-build-and-benchmark.md)
