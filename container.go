@@ -405,8 +405,6 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 							pointers[injectDef.fieldType] = append(pointers[injectDef.fieldType], &injection{objBean, value, injectDef, ctn})
 						case reflect.Interface:
 							interfaces[injectDef.fieldType] = append(interfaces[injectDef.fieldType], &injection{objBean, value, injectDef, ctn})
-						case reflect.Func:
-							pointers[injectDef.fieldType] = append(pointers[injectDef.fieldType], &injection{objBean, value, injectDef, ctn})
 						default:
 							return errors.Errorf("injecting not a pointer or interface on field type '%v' at position '%s' in %v", injectDef.fieldType, pos, classPtr)
 						}
@@ -457,29 +455,8 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 				secondaryList = append(secondaryList, objBean)
 			}
 
-		case reflect.Func:
-
-			if verbose != nil {
-				verbose.Printf("Function %v\n", classPtr)
-			}
-
-			/*
-				Register function in container
-			*/
-			objBean := &bean{
-				name:     classPtr.String(),
-				obj:      obj,
-				valuePtr: reflect.ValueOf(obj),
-				beanDef: &beanDef{
-					classPtr: classPtr,
-				},
-				lifecycle: BeanInitialized,
-			}
-
-			registerBean(core, classPtr, objBean)
-
 		default:
-			return errors.Errorf("instance could be a pointer or function, but was '%s' on position '%s' of type '%v'", classPtr.Kind().String(), pos, classPtr)
+			return errors.Errorf("instance must be a pointer to a struct or interface (got '%s' at position '%s' of type '%v')", classPtr.Kind().String(), pos, classPtr)
 		}
 
 		return nil
@@ -966,7 +943,7 @@ func (t *container) Inject(obj any) error {
 func (t *container) getBean(ifaceType reflect.Type) []beanlist {
 
 	switch ifaceType.Kind() {
-	case reflect.Ptr, reflect.Func:
+	case reflect.Ptr:
 		return t.searchAndCacheObjectRecursive(ifaceType)
 
 	case reflect.Interface:

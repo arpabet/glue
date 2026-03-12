@@ -40,21 +40,9 @@ Common options:
 Glue supports:
 * pointers
 * interfaces
-* functions
 
 Struct values are not supported as registered beans. Register pointers instead.
-
-## Function Injection
-
-Function values are first-class beans too.
-
-```go
-type holder struct {
-    Strings func() []string `inject:""`
-}
-```
-
-This is useful for lazy computation or injecting primitive collections that are not ordinary beans.
+Functions are not registered as beans; use factory beans or struct providers. Scoped providers still use function-typed fields (for `scope=prototype` / `scope=request`).
 
 ## Injection Basics
 

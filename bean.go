@@ -552,9 +552,14 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 					fieldType = field.Type.Elem()
 					kind = fieldType.Kind()
 				}
-			}
-			if kind != reflect.Ptr && kind != reflect.Interface && kind != reflect.Func {
-				return nil, errors.Errorf("not a pointer, interface or function field type '%v' on position %d in %v with 'inject' tag", field.Type, j, classPtr)
+				if kind != reflect.Ptr && kind != reflect.Interface {
+					return nil, errors.Errorf("not a pointer or interface field type '%v' on position %d in %v with 'inject' tag", field.Type, j, classPtr)
+				}
+			} else {
+				// scoped providers must be functions; signature checked earlier
+				if kind != reflect.Func {
+					return nil, errors.Errorf("scoped field '%s' in '%v' must be a function, got '%v'", field.Name, classPtr, field.Type)
+				}
 			}
 			def := &injectionDef{
 				class:                     class,

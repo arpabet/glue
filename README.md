@@ -57,7 +57,7 @@ Detailed documentation is organized under `docs/`:
 ## Highlights
 
 Core features:
-* pointer, interface, and function injection
+* pointer and interface injection; functions are not registered as beans (scoped providers still use function-typed fields)
 * qualifier, primary, optional, and lazy injection
 * collection injection for slices and maps
 * `PostConstruct` / `Destroy` lifecycle hooks with and without `context.Context`

@@ -87,7 +87,7 @@ func TestBeanByStruct(t *testing.T) {
 	)
 	require.Error(t, err)
 	require.Nil(t, ctx)
-	require.True(t, strings.Contains(err.Error(), "could be a pointer or function"))
+	require.True(t, strings.Contains(err.Error(), "must be a pointer"))
 
 }
 
