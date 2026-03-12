@@ -304,20 +304,22 @@ func (t *factory) singleton() bool {
 
 func (t *factory) ctor(ctx context.Context) (*bean, bool, error) {
 	var b *bean
-	var singleton bool
 
 	if len(t.instances) == 0 {
 		return nil, false, errors.Errorf("internal: element bean collection is empty for factory '%v'", t.factoryClassPtr)
 	}
 
 	if t.singleton() {
+		// singleton bean
 		if t.instances[0].obj == nil {
+			// empty obj indicates that singleton bean still was not created, let's do it
 			b = t.instances[0]
-			singleton = true
 		} else {
+			// re-use the already created bean
 			return t.instances[0], false, nil
 		}
 	} else {
+		// prototype or request bean
 		if t.instances[0].obj == nil {
 			b = t.instances[0]
 		} else {
@@ -346,12 +348,9 @@ func (t *factory) ctor(ctx context.Context) (*bean, bool, error) {
 
 	b.obj = obj
 	b.lifecycle = BeanInitialized
-	if namedBean, ok := obj.(NamedBean); ok {
-		b.name = namedBean.BeanName()
-	}
 	b.valuePtr = reflect.ValueOf(obj)
 
-	return b, !singleton, nil
+	return b, true, nil
 }
 
 type factoryDependency struct {

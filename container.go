@@ -204,10 +204,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 		parent:     parent,
 		core:       core,
 		localNames: localNames,
-		registry: registry{
-			beansByType:     make(map[reflect.Type][]*bean),
-			resourceSources: make(map[string]*resourceSource),
-		},
+		registry:   ctorRegistry(),
 		properties: options.Properties,
 	}
 
@@ -903,14 +900,16 @@ func (t *container) Inject(obj any) error {
 	return nil
 }
 
-// multi-threading safe
+// multi-threading safe, runtime lookup
 func (t *container) getBean(ifaceType reflect.Type) []beanlist {
 
 	switch ifaceType.Kind() {
 	case reflect.Ptr:
+		// immutable
 		return t.findObjectRecursive(ifaceType)
 
 	case reflect.Interface:
+		// mutable since some new interfaces unknown on container creation could be added later, therefore needed cache and multi-threading support
 		return t.searchAndCacheInterfaceCandidatesRecursive(ifaceType)
 
 	default:
@@ -1005,11 +1004,10 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		if err != nil {
 			return errors.Errorf("factory ctor '%v' failed, %v", factoryDep.factory.factoryClassPtr, err)
 		}
-		if created && factoryDep.factory.singleton() {
+		if created {
 			if verbose != nil {
-				verbose.Printf("%sDep Created Bean %s with type '%v'\n", indent(len(stack)+1), bean.name, bean.beanDef.classPtr)
+				verbose.Printf("%sDep Created Bean %s with type '%v' singleton=%v\n", indent(len(stack)+1), bean.name, bean.beanDef.classPtr, factoryDep.factory.singleton())
 			}
-			t.registry.addBean(factoryDep.factory.objectType(), bean)
 		}
 		err = factoryDep.injection(bean)
 		if err != nil {
@@ -1073,7 +1071,11 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		}
 	}
 
-	t.addDisposable(bean)
+	if bean.beenFactory == nil {
+		// add disposable only for managed beans, not produced. Spring Framework pattern.
+		t.addDisposable(bean)
+	}
+
 	bean.lifecycle = BeanInitialized
 	return nil
 }

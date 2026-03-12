@@ -6,10 +6,11 @@
 package glue
 
 import (
-	"github.com/pkg/errors"
 	"net/http"
 	"reflect"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 /**
@@ -18,8 +19,9 @@ Holds runtime information about all beans visible from current container includi
 
 type registry struct {
 	sync.RWMutex
-	beansByType     map[reflect.Type][]*bean
-	resourceSources map[string]*resourceSource
+	// mutable cache for known on container creation time and unknown and later known interfaces
+	candidatesByInterface map[reflect.Type][]*bean
+	resourceSources       map[string]*resourceSource
 }
 
 type resourceSource struct {
@@ -58,10 +60,17 @@ func (t *resourceSource) merge(other *ResourceSource) error {
 	return nil
 }
 
-func (t *registry) findByType(ifaceType reflect.Type) ([]*bean, bool) {
+func ctorRegistry() registry {
+	return registry{
+		candidatesByInterface: make(map[reflect.Type][]*bean),
+		resourceSources:       make(map[string]*resourceSource),
+	}
+}
+
+func (t *registry) findInterfaceCandidates(ifaceType reflect.Type) ([]*bean, bool) {
 	t.RLock()
 	defer t.RUnlock()
-	list, ok := t.beansByType[ifaceType]
+	list, ok := t.candidatesByInterface[ifaceType]
 	return list, ok
 }
 
@@ -75,27 +84,20 @@ func (t *registry) findResource(source, name string) (Resource, bool) {
 	return nil, false
 }
 
-func (t *registry) addBeanList(ifaceType reflect.Type, list []*bean) {
+func (t *registry) cacheInterfaceCandidates(ifaceType reflect.Type, list []*bean) {
 	t.Lock()
 	defer t.Unlock()
 	if len(list) == 0 {
-		// use placeholder for the interface type
-		// it would mark the type as known
-		_, ok := t.beansByType[ifaceType]
+		_, ok := t.candidatesByInterface[ifaceType]
 		if !ok {
-			t.beansByType[ifaceType] = []*bean{}
+			// use placeholder for the interface type even if not found, for repeated cache lookups
+			t.candidatesByInterface[ifaceType] = []*bean{}
 		}
 	} else {
 		for _, b := range list {
-			t.beansByType[ifaceType] = append(t.beansByType[ifaceType], b)
+			t.candidatesByInterface[ifaceType] = append(t.candidatesByInterface[ifaceType], b)
 		}
 	}
-}
-
-func (t *registry) addBean(ifaceType reflect.Type, b *bean) {
-	t.Lock()
-	defer t.Unlock()
-	t.beansByType[ifaceType] = append(t.beansByType[ifaceType], b)
 }
 
 func (t *registry) addResourceSource(other *ResourceSource) error {
