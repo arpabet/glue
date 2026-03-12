@@ -482,13 +482,8 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			verbose.Println("Object", requiredType, len(injects))
 		}
 
-		direct := ctn.findObjectRecursive(requiredType)
+		direct := ctn.searchAndCacheObjectRecursive(requiredType)
 		if len(direct) > 0 {
-
-			// register only beans from current container
-			if direct[0].level == 1 {
-				ctn.registry.addBeanList(requiredType, direct[0].list)
-			}
 
 			if verbose != nil {
 				verbose.Printf("Inject '%v' by pointer '%+v' in to %+v\n", requiredType, direct, injects)
@@ -531,7 +526,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			verbose.Println("Interface", ifaceType, len(injects))
 		}
 
-		candidates := ctn.searchInterfaceCandidatesRecursive(ifaceType)
+		candidates := ctn.searchAndCacheInterfaceCandidatesRecursive(ifaceType)
 		if len(candidates) == 0 {
 
 			if verbose != nil {
@@ -555,12 +550,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 
 			continue
 		}
-
-		// register beans that found only in current container
-		if candidates[0].level == 1 {
-			ctn.registry.addBeanList(ifaceType, candidates[0].list)
-		}
-
+		
 		for _, inject := range injects {
 
 			if verbose != nil {
@@ -698,18 +688,6 @@ func (t *container) loadProperties(propertySources []*PropertySource) error {
 	}
 
 	return nil
-}
-
-func (t *container) findObjectRecursive(requiredType reflect.Type) []beanlist {
-	var candidates []beanlist
-	level := 1
-	for ctx := t; ctx != nil; ctx = ctx.parent {
-		if direct, ok := ctx.core[requiredType]; ok {
-			candidates = append(candidates, beanlist{level: level, list: direct})
-		}
-		level++
-	}
-	return candidates
 }
 
 func (t *container) searchAndCacheObjectRecursive(requiredType reflect.Type) []beanlist {
@@ -1308,21 +1286,6 @@ func multipleErr(err []error) error {
 	default:
 		return errors.Errorf("multiple errors, %v", err)
 	}
-}
-
-var errNotFoundInterface = errors.New("not found")
-
-func (t *container) searchInterfaceCandidatesRecursive(ifaceType reflect.Type) []beanlist {
-	var candidates []beanlist
-	level := 1
-	for ctx := t; ctx != nil; ctx = ctx.parent {
-		list := ctx.searchInterfaceCandidates(ifaceType)
-		if len(list) > 0 {
-			candidates = append(candidates, beanlist{level: level, list: list})
-		}
-		level++
-	}
-	return candidates
 }
 
 func (t *container) searchAndCacheInterfaceCandidatesRecursive(ifaceType reflect.Type) []beanlist {
