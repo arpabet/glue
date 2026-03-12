@@ -378,3 +378,45 @@ func TestFactoryBeanProducedBeanLifecycle(t *testing.T) {
 	require.Equal(t, int32(0), atomic.LoadInt32(&holder.Produced.destroyCalled),
 		"container should NOT call Destroy on the FactoryBean-produced bean")
 }
+
+type namedProducedBean struct{}
+
+func (t *namedProducedBean) BeanName() string {
+	return "runtimeNamedBean"
+}
+
+var namedProducedBeanClass = reflect.TypeOf((*namedProducedBean)(nil))
+
+type namedProducedFactory struct {
+	glue.FactoryBean
+}
+
+func (t *namedProducedFactory) Object() (any, error) {
+	return &namedProducedBean{}, nil
+}
+
+func (t *namedProducedFactory) ObjectType() reflect.Type {
+	return namedProducedBeanClass
+}
+
+func (t *namedProducedFactory) ObjectName() string {
+	return "factoryNamedBean"
+}
+
+func (t *namedProducedFactory) Singleton() bool {
+	return true
+}
+
+func TestFactoryBeanObjectNameIsAuthoritative(t *testing.T) {
+	ctn, err := glue.New(&namedProducedFactory{})
+	require.NoError(t, err)
+	defer ctn.Close()
+
+	list := ctn.Lookup("factoryNamedBean", glue.DefaultSearchLevel)
+	require.Equal(t, 1, len(list))
+	require.Equal(t, "factoryNamedBean", list[0].Name())
+	require.IsType(t, &namedProducedBean{}, list[0].Object())
+
+	list = ctn.Lookup("runtimeNamedBean", glue.DefaultSearchLevel)
+	require.Equal(t, 0, len(list))
+}

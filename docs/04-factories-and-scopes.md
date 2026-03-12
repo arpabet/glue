@@ -41,8 +41,12 @@ Context source:
 
 Current behavior:
 * `ContextFactoryBean` is preferred when both factory interfaces are implemented
+* `ObjectName()` is the authoritative bean name for the produced object
+* `NamedBean` on the produced object is ignored
 * factory-produced objects are produced instances, not full managed beans
 * they do not automatically receive property injection or lifecycle hooks
+* they are not automatically registered for container-managed destroy callbacks
+* if a produced singleton needs initialization or cleanup, the `FactoryBean` itself must manage it
 
 ## Scopes
 

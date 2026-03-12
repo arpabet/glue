@@ -346,9 +346,6 @@ func (t *factory) ctor(ctx context.Context) (*bean, bool, error) {
 
 	b.obj = obj
 	b.lifecycle = BeanInitialized
-	if namedBean, ok := obj.(NamedBean); ok {
-		b.name = namedBean.BeanName()
-	}
 	b.valuePtr = reflect.ValueOf(obj)
 
 	return b, !singleton, nil

@@ -61,7 +61,7 @@ Core features:
 * qualifier, primary, optional, and lazy injection
 * collection injection for slices and maps
 * `PostConstruct` / `Destroy` lifecycle hooks with and without `context.Context`
-* `FactoryBean` and `ContextFactoryBean`
+* `FactoryBean` and `ContextFactoryBean` with factory-owned product naming and lifecycle
 * `singleton`, `prototype`, and `request` scopes
 * profiles and conditional bean registration
 * parent-child containers and lazy child containers
