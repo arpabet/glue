@@ -205,7 +205,6 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 		core:       core,
 		localNames: localNames,
 		registry: registry{
-			beansByName:     make(map[string][]*bean),
 			beansByType:     make(map[reflect.Type][]*bean),
 			resourceSources: make(map[string]*resourceSource),
 		},
@@ -550,7 +549,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 
 			continue
 		}
-		
+
 		for _, inject := range injects {
 
 			if verbose != nil {
@@ -881,9 +880,9 @@ func (t *container) Bean(typ reflect.Type, level int) []Bean {
 	return beanList
 }
 
-func (t *container) Lookup(iface string, level int) []Bean {
+func (t *container) Lookup(name string, level int) []Bean {
 	var beanList []Bean
-	candidates := t.searchByNameRecursive(iface)
+	candidates := t.searchByNameRecursive(name)
 	if len(candidates) > 0 {
 		list := orderBeans(levelBeans(candidates, level))
 		for _, b := range list {
@@ -947,20 +946,6 @@ func (t *container) searchByNameRecursive(name string) []beanlist {
 	level := 1
 	for ctx := t; ctx != nil; ctx = ctx.parent {
 		if list, ok := ctx.localNames[name]; ok && len(list) > 0 {
-			candidates = append(candidates, beanlist{level: level, list: list})
-		} else if list, ok := ctx.registry.findByName(name); ok {
-			candidates = append(candidates, beanlist{level: level, list: list})
-		}
-		level++
-	}
-	return candidates
-}
-
-func (t *container) searchByNameInRepositoryRecursive(iface string) []beanlist {
-	var candidates []beanlist
-	level := 1
-	for ctx := t; ctx != nil; ctx = ctx.parent {
-		if list, ok := ctx.registry.findByName(iface); ok {
 			candidates = append(candidates, beanlist{level: level, list: list})
 		}
 		level++
@@ -1055,7 +1040,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		if err != nil {
 			return errors.Errorf("factory ctor '%v' failed, %v", factoryDep.factory.factoryClassPtr, err)
 		}
-		if created {
+		if created && factoryDep.factory.singleton() {
 			if verbose != nil {
 				verbose.Printf("%sDep Created Bean %s with type '%v'\n", indent(len(stack)+1), bean.name, bean.beanDef.classPtr)
 			}
