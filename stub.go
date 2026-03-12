@@ -61,6 +61,15 @@ func newConditionalBeanStub() ConditionalBean {
 
 func (t *conditionalBeanStub) ShouldRegisterBean() bool { return true }
 
+type scopedBeanStub struct {
+}
+
+func newScopedBeanStub() ScopedBean {
+	return &scopedBeanStub{}
+}
+
+func (t *scopedBeanStub) BeanScope() BeanScope { return ScopeSingleton }
+
 /**
 Initializing Bean Stub is using to replace empty field in struct that has glue.InitializingBean type
 */

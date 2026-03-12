@@ -77,6 +77,21 @@ type injectionDef struct {
 		level -1: look in union of all contexts.
 	*/
 	level int
+	/*
+		Scope of the injection (singleton, prototype, request).
+		Only meaningful when scope != ScopeSingleton.
+		The field type must be a function matching the scope's provider signature.
+	*/
+	scope BeanScope
+	/*
+		scopeProviderTakesContext is true when the provider function accepts context.Context as first arg.
+		Applies to scope=prototype (optional) and scope=request (required).
+	*/
+	scopeProviderTakesContext bool
+	/*
+		scopeReturnType is the T in func() (T, error) or func(context.Context) (T, error).
+	*/
+	scopeReturnType reflect.Type
 }
 
 type injection struct {
@@ -95,6 +110,12 @@ type injection struct {
 		Injection information
 	*/
 	injectionDef *injectionDef
+
+	/*
+		Container reference, needed for scoped injection to create new instances
+		with proper field/property injection
+	*/
+	ctn *container
 }
 
 type propInjectionDef struct {
@@ -284,6 +305,16 @@ func (t *injection) inject(deep []beanlist) error {
 				return errors.Errorf("can not find candidates to inject the required field '%s' in class '%v'", t.injectionDef.fieldName, t.injectionDef.class)
 			}
 		}
+		return nil
+	}
+
+	// Handle scoped injection: generate provider function instead of direct injection
+	if t.injectionDef.scope != ScopeSingleton {
+		impl, err := selectSingleCandidate(t.injectionDef.fieldName, t.injectionDef.class, list)
+		if err != nil {
+			return err
+		}
+		t.injectionDef.injectScopeProvider(field, impl, t.ctn)
 		return nil
 	}
 
@@ -609,6 +640,91 @@ func (t *propInjectionDef) injectDynamic(field reflect.Value, properties Propert
 
 	field.Set(fn)
 	return nil
+}
+
+// injectScopeProvider generates a provider function for scope=prototype or scope=request
+// and sets it on the field. The scopedBean is the template bean used to create new instances.
+// The ctn is the container reference needed for field/property injection on non-factory beans.
+func (t *injectionDef) injectScopeProvider(field reflect.Value, scopedBean *bean, ctn *container) {
+	returnType := t.scopeReturnType
+	zeroReturn := reflect.Zero(returnType)
+	zeroError := reflect.Zero(errorType)
+
+	switch t.scope {
+	case ScopePrototype:
+		fn := reflect.MakeFunc(t.fieldType, func(args []reflect.Value) []reflect.Value {
+			var ctx context.Context
+			if t.scopeProviderTakesContext {
+				ctx = args[0].Interface().(context.Context)
+			} else {
+				ctx = context.Background()
+			}
+			obj, err := createScopedInstance(ctx, ctn, scopedBean)
+			if err != nil {
+				return []reflect.Value{zeroReturn, reflect.ValueOf(err)}
+			}
+			return []reflect.Value{reflect.ValueOf(obj).Convert(returnType), zeroError}
+		})
+		field.Set(fn)
+
+	case ScopeRequest:
+		// func(context.Context) (T, error)
+		fn := reflect.MakeFunc(t.fieldType, func(args []reflect.Value) []reflect.Value {
+			ctx := args[0].Interface().(context.Context)
+			scope, ok := RequestScopeFromContext(ctx)
+			if !ok {
+				return []reflect.Value{zeroReturn, reflect.ValueOf(fmt.Errorf("no RequestScope found in context for scoped bean '%v'", returnType))}
+			}
+			obj, err := scope.getOrCreate(returnType, func() (interface{}, error) {
+				return createScopedInstance(ctx, ctn, scopedBean)
+			})
+			if err != nil {
+				return []reflect.Value{zeroReturn, reflect.ValueOf(err)}
+			}
+			return []reflect.Value{reflect.ValueOf(obj).Convert(returnType), zeroError}
+		})
+		field.Set(fn)
+	}
+}
+
+// createScopedInstance creates a new instance of the bean's type.
+// For factory beans it delegates to the factory (supporting both FactoryBean and ContextFactoryBean).
+// For non-factory beans it allocates a new struct, applies stubs, injects fields and properties
+// via the container, and runs PostConstruct (with or without context).
+func createScopedInstance(ctx context.Context, ctn *container, b *bean) (interface{}, error) {
+	if b.beenFactory != nil {
+		instance, _, err := b.beenFactory.ctor(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return instance.obj, nil
+	}
+
+	// Allocate a new struct instance
+	elemType := b.beanDef.classPtr.Elem()
+	newPtr := reflect.New(elemType)
+	obj := newPtr.Interface()
+
+	// Apply stubs for anonymous interface fields
+	b.beanDef.applyStubs(newPtr.Elem())
+
+	// Inject fields and properties via the container
+	if err := ctn.Inject(obj); err != nil {
+		return nil, errors.Errorf("scoped bean '%v' field injection failed: %v", b.beanDef.classPtr, err)
+	}
+
+	// Run PostConstruct — prefer context-aware variant
+	if init, ok := obj.(ContextInitializingBean); ok {
+		if err := init.PostConstruct(ctx); err != nil {
+			return nil, errors.Errorf("scoped bean '%v' PostConstruct(ctx) failed: %v", b.beanDef.classPtr, err)
+		}
+	} else if init, ok := obj.(InitializingBean); ok {
+		if err := init.PostConstruct(); err != nil {
+			return nil, errors.Errorf("scoped bean '%v' PostConstruct failed: %v", b.beanDef.classPtr, err)
+		}
+	}
+
+	return obj, nil
 }
 
 func convertProperty(s string, t reflect.Type, timeFormat string) (val reflect.Value, err error) {

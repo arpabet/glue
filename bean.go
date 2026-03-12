@@ -92,6 +92,8 @@ func (t *beanDef) applyStubs(value reflect.Value) {
 			stub = newProfileBeanStub()
 		case ConditionalBeanClass:
 			stub = newConditionalBeanStub()
+		case ScopedBeanClass:
+			stub = newScopedBeanStub()
 		case InitializingBeanClass:
 			stub = newInitializingBeanStub(t.classPtr.String())
 		case ContextInitializingBeanClass:
@@ -388,6 +390,7 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 				OrderedBeanClass,
 				ProfileBeanClass,
 				ConditionalBeanClass,
+				ScopedBeanClass,
 				InitializingBeanClass,
 				ContextInitializingBeanClass,
 				DisposableBeanClass,
@@ -469,6 +472,7 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 			var qualifier string
 			var optional bool
 			var lazy bool
+			var scopeStr string
 			level := DefaultSearchLevel
 			if hasInjectTag {
 				pairs := strings.Split(injectTag, ",")
@@ -488,6 +492,10 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 						if len(kv) > 1 {
 							level, _ = strconv.Atoi(kv[1])
 						}
+					case "scope":
+						if len(kv) > 1 {
+							scopeStr = strings.TrimSpace(kv[1])
+						}
 					default:
 						// shorthand: bare name (no "=") treated as qualifier; "-" is the no-op marker
 						if len(kv) == 1 && p != "" && p != "-" {
@@ -496,36 +504,72 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 					}
 				}
 			}
+
+			// Parse scope
+			var scope BeanScope
+			switch scopeStr {
+			case "":
+				scope = ScopeSingleton
+			case "singleton":
+				scope = ScopeSingleton
+			case "prototype":
+				scope = ScopePrototype
+			case "request":
+				scope = ScopeRequest
+			default:
+				return nil, errors.Errorf("unknown scope '%s' in field '%s' of '%v'", scopeStr, field.Name, classPtr)
+			}
+
+			// Validate scoped injection: must be a function with correct signature
+			var scopeProviderTakesContext bool
+			var scopeReturnType reflect.Type
+			if scope != ScopeSingleton {
+				ft := field.Type
+				if ft.Kind() != reflect.Func {
+					return nil, errors.Errorf("field '%s' in '%v' with scope=%s must be a function type, got %v", field.Name, classPtr, scopeStr, ft)
+				}
+				if err := validateScopeProviderFunc(field.Name, classPtr, ft, scope); err != nil {
+					return nil, err
+				}
+				scopeProviderTakesContext = ft.NumIn() == 1
+				scopeReturnType = ft.Out(0)
+			}
+
 			kind := field.Type.Kind()
 			fieldType := field.Type
 			var fieldSlice, fieldMap bool
-			switch kind {
-			case reflect.Slice:
-				fieldSlice = true
-				fieldType = field.Type.Elem()
-				kind = fieldType.Kind()
-			case reflect.Map:
-				fieldMap = true
-				if field.Type.Key().Kind() != reflect.String {
-					return nil, errors.Errorf("map must have string key to be injected for field type '%v' on position %d in %v with 'inject' tag", field.Type, j, classPtr)
+			if scope == ScopeSingleton {
+				switch kind {
+				case reflect.Slice:
+					fieldSlice = true
+					fieldType = field.Type.Elem()
+					kind = fieldType.Kind()
+				case reflect.Map:
+					fieldMap = true
+					if field.Type.Key().Kind() != reflect.String {
+						return nil, errors.Errorf("map must have string key to be injected for field type '%v' on position %d in %v with 'inject' tag", field.Type, j, classPtr)
+					}
+					fieldType = field.Type.Elem()
+					kind = fieldType.Kind()
 				}
-				fieldType = field.Type.Elem()
-				kind = fieldType.Kind()
 			}
 			if kind != reflect.Ptr && kind != reflect.Interface && kind != reflect.Func {
 				return nil, errors.Errorf("not a pointer, interface or function field type '%v' on position %d in %v with 'inject' tag", field.Type, j, classPtr)
 			}
 			def := &injectionDef{
-				class:     class,
-				fieldNum:  j,
-				fieldName: field.Name,
-				fieldType: fieldType,
-				lazy:      lazy,
-				isSlice:   fieldSlice,
-				isMap:     fieldMap,
-				optional:  optional,
-				qualifier: qualifier,
-				level:     level,
+				class:                     class,
+				fieldNum:                  j,
+				fieldName:                 field.Name,
+				fieldType:                 fieldType,
+				lazy:                      lazy,
+				isSlice:                   fieldSlice,
+				isMap:                     fieldMap,
+				optional:                  optional,
+				qualifier:                 qualifier,
+				level:                     level,
+				scope:                     scope,
+				scopeProviderTakesContext: scopeProviderTakesContext,
+				scopeReturnType:           scopeReturnType,
 			}
 			fields = append(fields, def)
 		}
@@ -612,6 +656,46 @@ func validateDynamicValueFunc(fieldName string, classPtr reflect.Type, ft reflec
 		}
 	default:
 		return bad("must return 1 or 2 values")
+	}
+	return nil
+}
+
+// validateScopeProviderFunc checks that ft matches the expected provider signature for the given scope.
+//
+//	scope=prototype: func() (T, error) or func(context.Context) (T, error)
+//	scope=request:   func(context.Context) (T, error)
+func validateScopeProviderFunc(fieldName string, classPtr reflect.Type, ft reflect.Type, scope BeanScope) error {
+	bad := func(msg string) error {
+		return errors.Errorf("scoped field '%s' in '%v' (scope=%s): %s", fieldName, classPtr, scope, msg)
+	}
+
+	// Must return exactly (T, error)
+	if ft.NumOut() != 2 {
+		return bad("must return (T, error)")
+	}
+	if ft.Out(1) != errorType {
+		return bad("second return value must be error")
+	}
+
+	switch scope {
+	case ScopePrototype:
+		switch ft.NumIn() {
+		case 0:
+			// func() (T, error) — OK
+		case 1:
+			if !ft.In(0).Implements(contextType) {
+				return bad("single parameter must be context.Context")
+			}
+		default:
+			return bad("must have 0 or 1 (context.Context) parameters")
+		}
+	case ScopeRequest:
+		if ft.NumIn() != 1 {
+			return bad("must have exactly 1 parameter (context.Context)")
+		}
+		if !ft.In(0).Implements(contextType) {
+			return bad("parameter must be context.Context")
+		}
 	}
 	return nil
 }

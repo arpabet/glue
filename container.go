@@ -388,15 +388,28 @@ func createContainer(parent *container, options ContainerOptions, scan []interfa
 						verbose.Printf("	Field %s%v %s\n", prefix, injectDef.fieldType, attrs)
 					}
 
-					switch injectDef.fieldType.Kind() {
-					case reflect.Ptr:
-						pointers[injectDef.fieldType] = append(pointers[injectDef.fieldType], &injection{objBean, value, injectDef})
-					case reflect.Interface:
-						interfaces[injectDef.fieldType] = append(interfaces[injectDef.fieldType], &injection{objBean, value, injectDef})
-					case reflect.Func:
-						pointers[injectDef.fieldType] = append(pointers[injectDef.fieldType], &injection{objBean, value, injectDef})
-					default:
-						return errors.Errorf("injecting not a pointer or interface on field type '%v' at position '%s' in %v", injectDef.fieldType, pos, classPtr)
+					if injectDef.scope != ScopeSingleton {
+						// Scoped injection: resolve by the return type of the provider function, not the function type itself
+						lookupType := injectDef.scopeReturnType
+						switch lookupType.Kind() {
+						case reflect.Ptr:
+							pointers[lookupType] = append(pointers[lookupType], &injection{objBean, value, injectDef, ctn})
+						case reflect.Interface:
+							interfaces[lookupType] = append(interfaces[lookupType], &injection{objBean, value, injectDef, ctn})
+						default:
+							return errors.Errorf("scoped field '%s' in '%v': return type '%v' must be pointer or interface", injectDef.fieldName, classPtr, lookupType)
+						}
+					} else {
+						switch injectDef.fieldType.Kind() {
+						case reflect.Ptr:
+							pointers[injectDef.fieldType] = append(pointers[injectDef.fieldType], &injection{objBean, value, injectDef, ctn})
+						case reflect.Interface:
+							interfaces[injectDef.fieldType] = append(interfaces[injectDef.fieldType], &injection{objBean, value, injectDef, ctn})
+						case reflect.Func:
+							pointers[injectDef.fieldType] = append(pointers[injectDef.fieldType], &injection{objBean, value, injectDef, ctn})
+						default:
+							return errors.Errorf("injecting not a pointer or interface on field type '%v' at position '%s' in %v", injectDef.fieldType, pos, classPtr)
+						}
 					}
 				}
 			}
