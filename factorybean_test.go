@@ -284,17 +284,17 @@ func TestContextFactoryBean(t *testing.T) {
 // lifecycleProducedBean is a bean produced by a FactoryBean that implements
 // both InitializingBean and DisposableBean.
 type lifecycleProducedBean struct {
-	postConstructCalled atomic.Int32
-	destroyCalled       atomic.Int32
+	postConstructCalled int32
+	destroyCalled       int32
 }
 
 func (t *lifecycleProducedBean) PostConstruct() error {
-	t.postConstructCalled.Add(1)
+	atomic.AddInt32(&t.postConstructCalled, 1)
 	return nil
 }
 
 func (t *lifecycleProducedBean) Destroy() error {
-	t.destroyCalled.Add(1)
+	atomic.AddInt32(&t.destroyCalled, 1)
 	return nil
 }
 
@@ -306,17 +306,17 @@ var lifecycleProducedBeanClass = reflect.TypeOf((*lifecycleProducedBean)(nil))
 type lifecycleFactory struct {
 	glue.FactoryBean
 	produced                *lifecycleProducedBean
-	factoryPostConstructed  atomic.Int32
-	factoryDestroyed        atomic.Int32
+	factoryPostConstructed  int32
+	factoryDestroyed        int32
 }
 
 func (t *lifecycleFactory) PostConstruct() error {
-	t.factoryPostConstructed.Add(1)
+	atomic.AddInt32(&t.factoryPostConstructed, 1)
 	return nil
 }
 
 func (t *lifecycleFactory) Destroy() error {
-	t.factoryDestroyed.Add(1)
+	atomic.AddInt32(&t.factoryDestroyed, 1)
 	return nil
 }
 
@@ -359,11 +359,11 @@ func TestFactoryBeanProducedBeanLifecycle(t *testing.T) {
 	require.Same(t, f.produced, holder.Produced)
 
 	// Factory's own PostConstruct SHOULD have been called
-	require.Equal(t, int32(1), f.factoryPostConstructed.Load(),
+	require.Equal(t, int32(1), atomic.LoadInt32(&f.factoryPostConstructed),
 		"container should call PostConstruct on the FactoryBean itself")
 
 	// Produced bean's PostConstruct should NOT have been called by the container
-	require.Equal(t, int32(0), holder.Produced.postConstructCalled.Load(),
+	require.Equal(t, int32(0), atomic.LoadInt32(&holder.Produced.postConstructCalled),
 		"container should NOT call PostConstruct on the FactoryBean-produced bean")
 
 	// Close the container
@@ -371,10 +371,10 @@ func TestFactoryBeanProducedBeanLifecycle(t *testing.T) {
 	require.NoError(t, err)
 
 	// Factory's own Destroy SHOULD have been called
-	require.Equal(t, int32(1), f.factoryDestroyed.Load(),
+	require.Equal(t, int32(1), atomic.LoadInt32(&f.factoryDestroyed),
 		"container should call Destroy on the FactoryBean itself")
 
 	// Produced bean's Destroy should NOT have been called by the container
-	require.Equal(t, int32(0), holder.Produced.destroyCalled.Load(),
+	require.Equal(t, int32(0), atomic.LoadInt32(&holder.Produced.destroyCalled),
 		"container should NOT call Destroy on the FactoryBean-produced bean")
 }

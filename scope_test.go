@@ -24,14 +24,14 @@ type protoWorker struct {
 
 var protoWorkerClass = reflect.TypeOf((*protoWorker)(nil))
 
-var protoWorkerIDSeq atomic.Int32
+var protoWorkerIDSeq int32
 
 type protoWorkerFactory struct {
 	glue.FactoryBean
 }
 
 func (t *protoWorkerFactory) Object() (interface{}, error) {
-	return &protoWorker{ID: protoWorkerIDSeq.Add(1)}, nil
+	return &protoWorker{ID: atomic.AddInt32(&protoWorkerIDSeq, 1)}, nil
 }
 
 func (t *protoWorkerFactory) ObjectType() reflect.Type {
@@ -51,7 +51,7 @@ type protoConsumer struct {
 }
 
 func TestPrototypeScope(t *testing.T) {
-	protoWorkerIDSeq.Store(0)
+	atomic.StoreInt32(&protoWorkerIDSeq, 0)
 
 	consumer := &protoConsumer{}
 	ctx, err := glue.New(
@@ -81,7 +81,7 @@ type protoConsumerWithCtx struct {
 }
 
 func TestPrototypeScopeWithContext(t *testing.T) {
-	protoWorkerIDSeq.Store(0)
+	atomic.StoreInt32(&protoWorkerIDSeq, 0)
 
 	consumer := &protoConsumerWithCtx{}
 	ctx, err := glue.New(
@@ -112,14 +112,14 @@ type requestSession struct {
 
 var requestSessionClass = reflect.TypeOf((*requestSession)(nil))
 
-var requestSessionSeq atomic.Int32
+var requestSessionSeq int32
 
 type requestSessionFactory struct {
 	glue.FactoryBean
 }
 
 func (t *requestSessionFactory) Object() (interface{}, error) {
-	id := requestSessionSeq.Add(1)
+	id := atomic.AddInt32(&requestSessionSeq, 1)
 	return &requestSession{UserID: "user-" + string(rune('0'+id))}, nil
 }
 
@@ -140,7 +140,7 @@ type requestConsumer struct {
 }
 
 func TestRequestScope(t *testing.T) {
-	requestSessionSeq.Store(0)
+	atomic.StoreInt32(&requestSessionSeq, 0)
 
 	consumer := &requestConsumer{}
 	ctx, err := glue.New(
@@ -176,7 +176,7 @@ func TestRequestScope(t *testing.T) {
 }
 
 func TestRequestScopeNoContext(t *testing.T) {
-	requestSessionSeq.Store(0)
+	atomic.StoreInt32(&requestSessionSeq, 0)
 
 	consumer := &requestConsumer{}
 	ctx, err := glue.New(
@@ -268,10 +268,10 @@ type workerFactory struct {
 	glue.FactoryBean
 }
 
-var workerSeq atomic.Int32
+var workerSeq int32
 
 func (t *workerFactory) Object() (interface{}, error) {
-	return &workerImpl{id: workerSeq.Add(1)}, nil
+	return &workerImpl{id: atomic.AddInt32(&workerSeq, 1)}, nil
 }
 
 func (t *workerFactory) ObjectType() reflect.Type {
@@ -291,7 +291,7 @@ type ifaceProtoConsumer struct {
 }
 
 func TestPrototypeScopeInterface(t *testing.T) {
-	workerSeq.Store(0)
+	atomic.StoreInt32(&workerSeq, 0)
 
 	consumer := &ifaceProtoConsumer{}
 	ctx, err := glue.New(
