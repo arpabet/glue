@@ -481,7 +481,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			verbose.Println("Object", requiredType, len(injects))
 		}
 
-		direct := ctn.searchAndCacheObjectRecursive(requiredType)
+		direct := ctn.findObjectRecursive(requiredType)
 		if len(direct) > 0 {
 
 			if verbose != nil {
@@ -687,29 +687,6 @@ func (t *container) loadProperties(propertySources []*PropertySource) error {
 	}
 
 	return nil
-}
-
-func (t *container) searchAndCacheObjectRecursive(requiredType reflect.Type) []beanlist {
-	var candidates []beanlist
-	level := 1
-	for ctx := t; ctx != nil; ctx = ctx.parent {
-
-		// first lookup in the registry
-		if list, ok := ctx.registry.findByType(requiredType); !ok {
-			list = ctx.core[requiredType]
-			if len(list) > 0 {
-				candidates = append(candidates, beanlist{level: level, list: list})
-			}
-			// store in cache, even an empty list, so next time we would not come here
-			ctx.registry.addBeanList(requiredType, list)
-
-		} else if len(list) > 0 {
-			candidates = append(candidates, beanlist{level: level, list: list})
-		}
-
-		level++
-	}
-	return candidates
 }
 
 func registerBean(core map[reflect.Type][]*bean, localNames map[string][]*bean, classPtr reflect.Type, b *bean) {
@@ -931,7 +908,7 @@ func (t *container) getBean(ifaceType reflect.Type) []beanlist {
 
 	switch ifaceType.Kind() {
 	case reflect.Ptr:
-		return t.searchAndCacheObjectRecursive(ifaceType)
+		return t.findObjectRecursive(ifaceType)
 
 	case reflect.Interface:
 		return t.searchAndCacheInterfaceCandidatesRecursive(ifaceType)
@@ -939,18 +916,6 @@ func (t *container) getBean(ifaceType reflect.Type) []beanlist {
 	default:
 		return nil
 	}
-}
-
-func (t *container) searchByNameRecursive(name string) []beanlist {
-	var candidates []beanlist
-	level := 1
-	for ctx := t; ctx != nil; ctx = ctx.parent {
-		if list, ok := ctx.localNames[name]; ok && len(list) > 0 {
-			candidates = append(candidates, beanlist{level: level, list: list})
-		}
-		level++
-	}
-	return candidates
 }
 
 func getStackInfo(stack []*bean, delim string) string {
@@ -1271,37 +1236,6 @@ func multipleErr(err []error) error {
 	default:
 		return errors.Errorf("multiple errors, %v", err)
 	}
-}
-
-func (t *container) searchAndCacheInterfaceCandidatesRecursive(ifaceType reflect.Type) []beanlist {
-	var candidates []beanlist
-	level := 1
-	for ctx := t; ctx != nil; ctx = ctx.parent {
-		// first lookup in the registry
-		if list, ok := ctx.registry.findByType(ifaceType); !ok {
-			list = ctx.searchInterfaceCandidates(ifaceType)
-			if len(list) > 0 {
-				candidates = append(candidates, beanlist{level: level, list: list})
-			}
-			// cache in registry
-			// even empty list, so we would not come here again
-			ctx.registry.addBeanList(ifaceType, list)
-		} else if len(list) > 0 {
-			candidates = append(candidates, beanlist{level: level, list: list})
-		}
-		level++
-	}
-	return candidates
-}
-
-func (t *container) searchInterfaceCandidates(ifaceType reflect.Type) []*bean {
-	var candidates []*bean
-	for _, list := range t.core {
-		if len(list) > 0 && list[0].beanDef.implements(ifaceType) {
-			candidates = append(candidates, list...)
-		}
-	}
-	return candidates
 }
 
 func (t *container) Resource(path string) (Resource, bool) {
