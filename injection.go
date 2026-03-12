@@ -494,7 +494,7 @@ func (t *injectionDef) inject(value *reflect.Value, deep []beanlist) error {
 
 	if impl.beenFactory != nil {
 
-			service, _, err := impl.beenFactory.ctor(context.Background())
+		service, _, err := impl.beenFactory.ctor(context.Background())
 		if err != nil {
 			return errors.Errorf("field '%s' in class '%v' can not be injected because of factory bean %+v error, %v", t.fieldName, t.class, impl, err)
 		}
