@@ -43,6 +43,12 @@ type container struct {
 	core map[reflect.Type][]*bean
 
 	/**
+	All bean names scanned during creation of container.
+	No modifications on runtime allowed.
+	*/
+	localNames map[string][]*bean
+
+	/**
 	List of beans in initialization order that should depose on close
 	*/
 	disposables []*bean
@@ -172,8 +178,10 @@ func getActiveProfiles(properties Properties) []string {
 func createContainer(parent *container, options ContainerOptions, scan []any) (ctn *container, err error) {
 
 	core := make(map[reflect.Type][]*bean)
+	localNames := make(map[string][]*bean)
 	pointers := make(map[reflect.Type][]*injection)
 	interfaces := make(map[reflect.Type][]*injection)
+
 	var propertySources []*PropertySource
 	var propertyResolvers []PropertyResolver
 	var primaryList []*bean
@@ -193,8 +201,9 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 	}
 
 	ctn = &container{
-		parent: parent,
-		core:   core,
+		parent:     parent,
+		core:       core,
+		localNames: localNames,
 		registry: registry{
 			beansByName:     make(map[string][]*bean),
 			beansByType:     make(map[reflect.Type][]*bean),
@@ -437,14 +446,14 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 				}
 				f.instances = []*bean{elemBean}
 				// we can have singleton or multiple beans in container produced by this factory, let's allocate reference for injections even if those beans are still not exist
-				registerBean(core, elemClassPtr, elemBean)
+				registerBean(core, localNames, elemClassPtr, elemBean)
 				secondaryList = append(secondaryList, elemBean)
 			}
 
 			/*
 				Register bean itself
 			*/
-			registerBean(core, classPtr, objBean)
+			registerBean(core, localNames, classPtr, objBean)
 
 			/**
 			Initialize property resolver beans at first
@@ -726,8 +735,9 @@ func (t *container) searchAndCacheObjectRecursive(requiredType reflect.Type) []b
 	return candidates
 }
 
-func registerBean(registry map[reflect.Type][]*bean, classPtr reflect.Type, bean *bean) {
-	registry[classPtr] = append(registry[classPtr], bean)
+func registerBean(core map[reflect.Type][]*bean, localNames map[string][]*bean, classPtr reflect.Type, b *bean) {
+	core[classPtr] = append(core[classPtr], b)
+	localNames[b.name] = append(localNames[b.name], b)
 }
 
 func forEach(active map[string]struct{}, initialPos string, scan []any, cb func(i string, obj any) error) error {
@@ -895,7 +905,7 @@ func (t *container) Bean(typ reflect.Type, level int) []Bean {
 
 func (t *container) Lookup(iface string, level int) []Bean {
 	var beanList []Bean
-	candidates := t.searchByNameInRepositoryRecursive(iface)
+	candidates := t.searchByNameRecursive(iface)
 	if len(candidates) > 0 {
 		list := orderBeans(levelBeans(candidates, level))
 		for _, b := range list {
@@ -952,6 +962,20 @@ func (t *container) getBean(ifaceType reflect.Type) []beanlist {
 	default:
 		return nil
 	}
+}
+
+func (t *container) searchByNameRecursive(name string) []beanlist {
+	var candidates []beanlist
+	level := 1
+	for ctx := t; ctx != nil; ctx = ctx.parent {
+		if list, ok := ctx.localNames[name]; ok && len(list) > 0 {
+			candidates = append(candidates, beanlist{level: level, list: list})
+		} else if list, ok := ctx.registry.findByName(name); ok {
+			candidates = append(candidates, beanlist{level: level, list: list})
+		}
+		level++
+	}
+	return candidates
 }
 
 func (t *container) searchByNameInRepositoryRecursive(iface string) []beanlist {
