@@ -1,5 +1,10 @@
 //go:build go1.18
 
+/*
+ * Copyright (c) 2025 Karagatan LLC.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 package glue_test
 
 import (
@@ -73,8 +78,8 @@ func TestFactories(t *testing.T) {
 	var requestSeq int32
 
 	type holder struct {
-		Singleton    *singletonPayload                            `inject:""`
-		NewPrototype func() (*prototypePayload, error)            `inject:"scope=prototype"`
+		Singleton    *singletonPayload                              `inject:""`
+		NewPrototype func() (*prototypePayload, error)              `inject:"scope=prototype"`
 		GetRequest   func(context.Context) (*requestPayload, error) `inject:"scope=request"`
 	}
 
