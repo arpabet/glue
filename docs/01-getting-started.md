@@ -44,6 +44,18 @@ Glue supports:
 
 Struct values are not supported as registered beans. Register pointers instead.
 
+## Function Injection
+
+Function values are first-class beans too.
+
+```go
+type holder struct {
+    Strings func() []string `inject:""`
+}
+```
+
+This is useful for lazy computation or injecting primitive collections that are not ordinary beans.
+
 ## Injection Basics
 
 Field injection example:
@@ -91,3 +103,24 @@ type holder struct {
 
 For map injection, beans must implement `glue.NamedBean`.
 For ordering in slices, beans may implement `glue.OrderedBean`.
+
+## Lazy and Optional Injection
+
+Lazy injection:
+
+```go
+type component struct {
+    Dependency *anotherComponent `inject:"lazy"`
+}
+```
+
+Optional injection:
+
+```go
+type component struct {
+    Dependency *anotherComponent `inject:"optional"`
+}
+```
+
+Use `lazy` to break cycles or defer initialization assumptions.
+Use `optional` only when nil is a legitimate runtime state and your code checks for it explicitly.

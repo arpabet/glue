@@ -51,6 +51,11 @@ Glue supports three scopes:
 * `prototype`
 * `request`
 
+Constants:
+* `glue.ScopeSingleton`
+* `glue.ScopePrototype`
+* `glue.ScopeRequest`
+
 ### Singleton
 
 This is the default scope.

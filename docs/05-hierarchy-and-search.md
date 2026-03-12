@@ -10,6 +10,11 @@ parent, err := glue.New(new(a))
 child, err := parent.Extend(new(b))
 ```
 
+Related APIs:
+* `Extend(...)`
+* `ExtendWithContext(ctx, ...)`
+* `ExtendWithOptions(..., ...)`
+
 Destroying the child does not destroy the parent.
 
 ## Lazy Children
