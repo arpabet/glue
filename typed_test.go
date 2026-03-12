@@ -19,6 +19,16 @@ type serviceImpl struct{}
 
 func (serviceImpl) Do() string { return "ok" }
 
+type prototypePayload struct {
+	Value  int32
+	closed int32
+}
+
+func (p *prototypePayload) Close() error {
+	atomic.StoreInt32(&p.closed, 1)
+	return nil
+}
+
 func TestBeanHelpers(t *testing.T) {
 	ctx, err := glue.New(&serviceImpl{})
 	require.NoError(t, err)
@@ -52,9 +62,6 @@ func TestPropertyHelpers(t *testing.T) {
 
 func TestFactories(t *testing.T) {
 	type singletonPayload struct {
-		Value int32
-	}
-	type prototypePayload struct {
 		Value int32
 	}
 	type requestPayload struct {
@@ -99,8 +106,13 @@ func TestFactories(t *testing.T) {
 	require.NoError(t, err)
 	require.NotSame(t, p1, p2)
 	require.NotEqual(t, p1.Value, p2.Value)
+	require.Equal(t, int32(0), atomic.LoadInt32(&p1.closed))
+	require.NoError(t, p1.Close())
+	require.Equal(t, int32(1), atomic.LoadInt32(&p1.closed))
+	require.Equal(t, int32(0), atomic.LoadInt32(&p2.closed))
 
 	scope1 := glue.NewRequestScope()
+	defer scope1.Close()
 	reqCtx1 := glue.WithRequestScope(context.Background(), scope1)
 	r1a, err := h.GetRequest(reqCtx1)
 	require.NoError(t, err)
@@ -109,6 +121,7 @@ func TestFactories(t *testing.T) {
 	require.Same(t, r1a, r1b)
 
 	scope2 := glue.NewRequestScope()
+	defer scope2.Close()
 	reqCtx2 := glue.WithRequestScope(context.Background(), scope2)
 	r2, err := h.GetRequest(reqCtx2)
 	require.NoError(t, err)

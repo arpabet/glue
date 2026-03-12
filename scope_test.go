@@ -139,6 +139,29 @@ type requestConsumer struct {
 	GetSession func(context.Context) (*requestSession, error) `inject:"scope=request"`
 }
 
+type requestScopedLifecycleBean struct {
+	initCtx      context.Context
+	destroyCtx   context.Context
+	initialized  bool
+	destroyed    bool
+}
+
+func (b *requestScopedLifecycleBean) PostConstruct(ctx context.Context) error {
+	b.initCtx = ctx
+	b.initialized = true
+	return nil
+}
+
+func (b *requestScopedLifecycleBean) Destroy(ctx context.Context) error {
+	b.destroyCtx = ctx
+	b.destroyed = true
+	return nil
+}
+
+type requestScopedLifecycleConsumer struct {
+	Get func(context.Context) (*requestScopedLifecycleBean, error) `inject:"scope=request"`
+}
+
 func TestRequestScope(t *testing.T) {
 	atomic.StoreInt32(&requestSessionSeq, 0)
 
@@ -154,6 +177,7 @@ func TestRequestScope(t *testing.T) {
 
 	// Create a request scope
 	scope1 := glue.NewRequestScope()
+	defer scope1.Close()
 	reqCtx1 := glue.WithRequestScope(context.Background(), scope1)
 
 	s1a, err := consumer.GetSession(reqCtx1)
@@ -167,6 +191,7 @@ func TestRequestScope(t *testing.T) {
 
 	// Different request scope should return different instance
 	scope2 := glue.NewRequestScope()
+	defer scope2.Close()
 	reqCtx2 := glue.WithRequestScope(context.Background(), scope2)
 
 	s2, err := consumer.GetSession(reqCtx2)
@@ -190,6 +215,32 @@ func TestRequestScopeNoContext(t *testing.T) {
 	_, err = consumer.GetSession(context.Background())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no RequestScope found")
+}
+
+func TestRequestScopeCloseWithContext(t *testing.T) {
+	consumer := &requestScopedLifecycleConsumer{}
+	ctn, err := glue.New(
+		&requestScopedLifecycleBean{},
+		consumer,
+	)
+	require.NoError(t, err)
+	defer ctn.Close()
+
+	scope := glue.NewRequestScope()
+	defer scope.Close()
+	reqCtx := context.WithValue(context.Background(), "request-id", "scope-1")
+	reqCtx = glue.WithRequestScope(reqCtx, scope)
+
+	bean, err := consumer.Get(reqCtx)
+	require.NoError(t, err)
+	require.True(t, bean.initialized)
+	require.Same(t, reqCtx, bean.initCtx)
+	require.False(t, bean.destroyed)
+
+	closeCtx := context.WithValue(context.Background(), "close-id", "close-1")
+	require.NoError(t, scope.CloseWithContext(closeCtx))
+	require.True(t, bean.destroyed)
+	require.Same(t, closeCtx, bean.destroyCtx)
 }
 
 // --- Validation tests ---
@@ -413,6 +464,7 @@ func TestRequestScopeClassicalBean(t *testing.T) {
 
 	// First request
 	scope1 := glue.NewRequestScope()
+	defer scope1.Close()
 	reqCtx1 := glue.WithRequestScope(context.Background(), scope1)
 
 	l1a, err := consumer.GetLogger(reqCtx1)
@@ -433,6 +485,7 @@ func TestRequestScopeClassicalBean(t *testing.T) {
 
 	// Second request gets a fresh instance
 	scope2 := glue.NewRequestScope()
+	defer scope2.Close()
 	reqCtx2 := glue.WithRequestScope(context.Background(), scope2)
 
 	l2, err := consumer.GetLogger(reqCtx2)
@@ -494,6 +547,7 @@ func TestRequestScopeWithContextFactoryBean(t *testing.T) {
 
 	// Create a request context with trace ID and request scope
 	scope1 := glue.NewRequestScope()
+	defer scope1.Close()
 	reqCtx := context.WithValue(context.Background(), traceKey{}, "trace-abc")
 	reqCtx = glue.WithRequestScope(reqCtx, scope1)
 
@@ -510,6 +564,7 @@ func TestRequestScopeWithContextFactoryBean(t *testing.T) {
 
 	// Different request scope with different trace
 	scope2 := glue.NewRequestScope()
+	defer scope2.Close()
 	reqCtx2 := context.WithValue(context.Background(), traceKey{}, "trace-xyz")
 	reqCtx2 = glue.WithRequestScope(reqCtx2, scope2)
 

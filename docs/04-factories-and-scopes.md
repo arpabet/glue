@@ -87,6 +87,31 @@ Prototype works with:
 
 For classical beans, Glue allocates a fresh instance, injects fields and properties, and runs `PostConstruct`.
 
+Lifecycle ownership:
+* prototype instances are not tracked by the container after they are returned
+* if a prototype instance owns resources, the caller must release them explicitly
+* this applies in particular to objects produced by factory functions
+
+Example:
+
+```go
+type worker struct{}
+
+func (w *worker) Close() error {
+    return nil
+}
+
+type consumer struct {
+    NewWorker func() (*worker, error) `inject:"scope=prototype"`
+}
+
+worker, err := consumer.NewWorker()
+if err != nil {
+    return err
+}
+defer worker.Close()
+```
+
 ### Request
 
 Request scope caches one instance per `RequestScope` attached to a context.
@@ -97,6 +122,7 @@ type consumer struct {
 }
 
 scope := glue.NewRequestScope()
+defer scope.Close()
 reqCtx := glue.WithRequestScope(context.Background(), scope)
 
 session, err := consumer.GetSession(reqCtx)
@@ -107,6 +133,8 @@ Rules:
 * if there is no `RequestScope` in the context, the provider returns an error
 * same request scope returns the same instance
 * different request scopes get different instances
+* close the `RequestScope` when the request finishes
+* closing the scope destroys cached request-scoped beans that implement `DisposableBean` or `ContextDisposableBean`
 
 ### `glue.ScopedBean`
 

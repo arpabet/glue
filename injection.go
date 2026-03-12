@@ -675,7 +675,7 @@ func (t *injectionDef) injectScopeProvider(field reflect.Value, scopedBean *bean
 			if !ok {
 				return []reflect.Value{zeroReturn, reflect.ValueOf(fmt.Errorf("no RequestScope found in context for scoped bean '%v'", returnType))}
 			}
-			obj, err := scope.getOrCreate(returnType, func() (any, error) {
+			obj, err := getOrCreateRequestScope(scope, returnType, func() (any, error) {
 				return createScopedInstance(ctx, ctn, scopedBean)
 			})
 			if err != nil {
@@ -685,6 +685,14 @@ func (t *injectionDef) injectScopeProvider(field reflect.Value, scopedBean *bean
 		})
 		field.Set(fn)
 	}
+}
+
+func getOrCreateRequestScope(scope RequestScope, typ reflect.Type, create func() (any, error)) (any, error) {
+	requestScope, ok := scope.(*requestScope)
+	if !ok {
+		return nil, fmt.Errorf("unsupported RequestScope implementation %T", scope)
+	}
+	return requestScope.getOrCreate(typ, create)
 }
 
 // createScopedInstance creates a new instance of the bean's type.
