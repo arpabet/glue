@@ -54,9 +54,15 @@ type container struct {
 	disposables []*bean
 
 	/**
-	Fast search of beans by faceType and name
+	Mutable cache for interface-to-implementation lookups
 	*/
-	registry registry
+	ifaceCache interfaceCache
+
+	/**
+	Resource sources registered during container creation.
+	No modifications on runtime allowed.
+	*/
+	resourceSources resourceCache
 
 	/**
 	Placeholder properties of the container
@@ -201,14 +207,15 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 	}
 
 	ctn = &container{
-		parent:     parent,
-		core:       core,
-		localNames: localNames,
-		registry:   ctorRegistry(),
-		properties: options.Properties,
+		parent:          parent,
+		core:            core,
+		localNames:      localNames,
+		ifaceCache:      ctorInterfaceCache(),
+		resourceSources: ctorResourceCache(),
+		properties:      options.Properties,
 	}
 
-	// add container bean to registry
+	// add container bean to core
 	ctnBean := &bean{
 		obj:      ctn,
 		valuePtr: reflect.ValueOf(ctn),
@@ -219,7 +226,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 	}
 	core[ctnBean.beanDef.classPtr] = []*bean{ctnBean}
 
-	// add properties bean to registry
+	// add properties bean to core
 	propertiesBean := &bean{
 		obj:      ctn,
 		valuePtr: reflect.ValueOf(ctn.properties),
@@ -250,7 +257,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 				verbose.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
 			}
 			ptr := &instance
-			if err := ctn.registry.addResourceSource(ptr); err != nil {
+			if err := ctn.resourceSources.addResourceSource(ptr); err != nil {
 				return err
 			}
 			obj = ptr
@@ -258,7 +265,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			if verbose != nil {
 				verbose.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
 			}
-			if err := ctn.registry.addResourceSource(instance); err != nil {
+			if err := ctn.resourceSources.addResourceSource(instance); err != nil {
 				return err
 			}
 		case PropertySource:
@@ -1250,7 +1257,7 @@ func (t *container) Resource(path string) (Resource, bool) {
 
 	current := t
 	for current != nil {
-		resource, ok := current.registry.findResource(source, name)
+		resource, ok := current.resourceSources.findResource(source, name)
 		if ok {
 			return resource, ok
 		}

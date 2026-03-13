@@ -35,15 +35,15 @@ func (t *container) searchAndCacheInterfaceCandidatesRecursive(ifaceType reflect
 	var candidates []beanlist
 	level := 1
 	for ctx := t; ctx != nil; ctx = ctx.parent {
-		// first lookup in the registry
-		if list, ok := ctx.registry.findInterfaceCandidates(ifaceType); !ok {
+		// first lookup in the interface cache
+		if list, ok := ctx.ifaceCache.find(ifaceType); !ok {
 			list = ctx.searchInterfaceCandidates(ifaceType)
 			if len(list) > 0 {
 				candidates = append(candidates, beanlist{level: level, list: list})
 			}
-			// cache in registry
+			// cache result
 			// even empty list, so we would not come here again
-			ctx.registry.cacheInterfaceCandidates(ifaceType, list)
+			ctx.ifaceCache.store(ifaceType, list)
 		} else if len(list) > 0 {
 			candidates = append(candidates, beanlist{level: level, list: list})
 		}
