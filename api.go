@@ -123,12 +123,27 @@ type Bean interface {
 	String() string
 }
 
+type ContainerLogger interface {
+
+	// Enabled - return true if log is enabled
+	Enabled() bool
+
+	// Printf calls l.Output to print to the logger.
+	// Arguments are handled in the manner of [fmt.Printf].
+	Printf(format string, v ...any)
+
+	// Println calls l.Output to print to the logger.
+	// Arguments are handled in the manner of [fmt.Println].
+	Println(v ...any)
+}
+
 var ContainerClass = reflect.TypeOf((*Container)(nil)).Elem()
 
 type ContainerOptions struct {
 	Context        context.Context
 	Properties     Properties
 	ActiveProfiles []string
+	Logger         ContainerLogger
 }
 
 type ContainerOption func(*ContainerOptions)
@@ -152,6 +167,12 @@ func WithProfiles(profiles ...string) ContainerOption {
 			return
 		}
 		opts.ActiveProfiles = append([]string(nil), profiles...)
+	}
+}
+
+func WithLogger(log ContainerLogger) ContainerOption {
+	return func(opts *ContainerOptions) {
+		opts.Logger = log
 	}
 }
 
