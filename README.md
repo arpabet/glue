@@ -54,6 +54,7 @@ Detailed documentation is organized under `docs/`:
 * [Hierarchy and Search](docs/05-hierarchy-and-search.md)
 * [Properties and Resources](docs/06-properties-and-resources.md)
 * [Build and Benchmark](docs/07-build-and-benchmark.md)
+* [Gluegen](docs/08-gluegen.md)
 
 ## Highlights
 
