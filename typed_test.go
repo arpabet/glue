@@ -132,3 +132,77 @@ func TestFactories(t *testing.T) {
 	require.NoError(t, err)
 	require.NotSame(t, r1a, r2)
 }
+
+func TestContextFactories(t *testing.T) {
+	type ctxPayload struct {
+		TraceID string
+	}
+
+	type traceKey struct{}
+
+	singletonFactory := glue.SingletonContextFactory(func(ctx context.Context) (*ctxPayload, error) {
+		traceID, _ := ctx.Value(traceKey{}).(string)
+		return &ctxPayload{TraceID: traceID}, nil
+	})
+
+	holder := &struct {
+		Payload *ctxPayload `inject:""`
+	}{}
+
+	buildCtx := context.WithValue(context.Background(), traceKey{}, "trace-123")
+	ctn, err := glue.NewWithContext(buildCtx, singletonFactory, holder)
+	require.NoError(t, err)
+	defer ctn.Close()
+
+	require.NotNil(t, holder.Payload)
+	require.Equal(t, "trace-123", holder.Payload.TraceID)
+
+	result, err := glue.GetBean[*ctxPayload](ctn)
+	require.NoError(t, err)
+	require.Same(t, holder.Payload, result)
+}
+
+func TestContextFactoryRequestScope(t *testing.T) {
+	type ctxSession struct {
+		TraceID string
+		Seq     int32
+	}
+
+	type traceKey struct{}
+
+	var seq int32
+	requestFactory := glue.RequestContextFactory(func(ctx context.Context) (*ctxSession, error) {
+		traceID, _ := ctx.Value(traceKey{}).(string)
+		return &ctxSession{TraceID: traceID, Seq: atomic.AddInt32(&seq, 1)}, nil
+	})
+
+	holder := &struct {
+		GetSession func(context.Context) (*ctxSession, error) `inject:"scope=request"`
+	}{}
+
+	ctn, err := glue.New(requestFactory, holder)
+	require.NoError(t, err)
+	defer ctn.Close()
+
+	scope := glue.NewRequestScope()
+	defer scope.Close()
+	reqCtx := glue.WithRequestScope(context.WithValue(context.Background(), traceKey{}, "trace-abc"), scope)
+
+	s1, err := holder.GetSession(reqCtx)
+	require.NoError(t, err)
+	require.Equal(t, "trace-abc", s1.TraceID)
+
+	// Same scope returns same instance
+	s2, err := holder.GetSession(reqCtx)
+	require.NoError(t, err)
+	require.Same(t, s1, s2)
+
+	// Different scope returns different instance
+	scope2 := glue.NewRequestScope()
+	defer scope2.Close()
+	reqCtx2 := glue.WithRequestScope(context.WithValue(context.Background(), traceKey{}, "trace-def"), scope2)
+	s3, err := holder.GetSession(reqCtx2)
+	require.NoError(t, err)
+	require.NotSame(t, s1, s3)
+	require.Equal(t, "trace-def", s3.TraceID)
+}

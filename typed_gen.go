@@ -8,6 +8,7 @@
 package glue
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/pkg/errors"
@@ -28,9 +29,12 @@ func GetBean[T any](c Container) (T, error) {
 		return zero, errors.Errorf("bean '%s' is ambiguous", typ)
 	}
 	obj := beans[0].Object()
+	if obj == nil {
+		return zero, errors.Errorf("bean '%s' is not initialized", typ)
+	}
 	value, ok := obj.(T)
 	if !ok {
-		return zero, errors.Errorf("bean '%s' cannot be converted to target type", typ)
+		return zero, errors.Errorf("bean '%s' of type '%T' cannot be converted to '%s'", typ, obj, typ)
 	}
 	return value, nil
 }
@@ -95,8 +99,7 @@ func (t *genericFactory[T]) Object() (any, error) {
 }
 
 func (t *genericFactory[T]) ObjectType() reflect.Type {
-	var zero T
-	return reflect.TypeOf(zero)
+	return reflect.TypeOf((*T)(nil)).Elem()
 }
 
 func (t *genericFactory[T]) ObjectName() string {
@@ -104,5 +107,38 @@ func (t *genericFactory[T]) ObjectName() string {
 }
 
 func (t *genericFactory[T]) Singleton() bool {
+	return t.singleton
+}
+
+func SingletonContextFactory[T any](factory func(context.Context) (T, error)) ContextFactoryBean {
+	return &genericContextFactory[T]{fn: factory, singleton: true}
+}
+
+func PrototypeContextFactory[T any](factory func(context.Context) (T, error)) ContextFactoryBean {
+	return &genericContextFactory[T]{fn: factory, singleton: false}
+}
+
+func RequestContextFactory[T any](factory func(context.Context) (T, error)) ContextFactoryBean {
+	return &genericContextFactory[T]{fn: factory, singleton: false}
+}
+
+type genericContextFactory[T any] struct {
+	fn        func(context.Context) (T, error)
+	singleton bool
+}
+
+func (t *genericContextFactory[T]) Object(ctx context.Context) (any, error) {
+	return t.fn(ctx)
+}
+
+func (t *genericContextFactory[T]) ObjectType() reflect.Type {
+	return reflect.TypeOf((*T)(nil)).Elem()
+}
+
+func (t *genericContextFactory[T]) ObjectName() string {
+	return t.ObjectType().String()
+}
+
+func (t *genericContextFactory[T]) Singleton() bool {
 	return t.singleton
 }

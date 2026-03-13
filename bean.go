@@ -323,13 +323,12 @@ func (t *factory) ctor(ctx context.Context) (*bean, bool, error) {
 		if t.instances[0].obj == nil {
 			b = t.instances[0]
 		} else {
-			// append next element, since it is not a singleton
+			// create transient instance, not tracked by the container
 			b = &bean{
 				name:        t.instances[0].beanDef.classPtr.String(),
 				beenFactory: t.instances[0].beenFactory,
 				beanDef:     t.instances[0].beanDef,
 			}
-			t.instances = append(t.instances, b)
 		}
 	}
 
