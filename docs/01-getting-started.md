@@ -34,6 +34,86 @@ Common options:
 * `glue.WithContext(ctx)`
 * `glue.WithProperties(props)`
 * `glue.WithProfiles("dev", "local")`
+* `glue.WithLogger(logger)`
+
+## Logging
+
+Glue uses the `ContainerLogger` interface for diagnostic logging during container creation, bean construction, property injection, and shutdown.
+
+```go
+type ContainerLogger interface {
+    Enabled() bool
+    Printf(format string, v ...any)
+    Println(v ...any)
+}
+```
+
+The `Enabled()` method allows guarding expensive log argument evaluation. When `Enabled()` returns false, the container skips log calls that involve allocations (such as building indentation strings or formatting bean descriptions).
+
+### Using WithLogger
+
+Pass a logger via the `WithLogger` container option:
+
+```go
+ctn, err := glue.NewWithOptions(
+    []glue.ContainerOption{glue.WithLogger(myLogger)},
+    &myBean{},
+)
+```
+
+### Using the global Verbose (backward compatibility)
+
+The legacy `glue.Verbose()` function sets a global `*log.Logger` that is used as a fallback when no `WithLogger` option is provided:
+
+```go
+glue.Verbose(log.Default()) // enable verbose logging globally
+```
+
+`*log.Logger` satisfies `ContainerLogger`, so it works directly. To disable logging, pass `nil`:
+
+```go
+glue.Verbose(nil) // disable
+```
+
+### Logger inheritance
+
+Child containers created via `Extend` inherit the parent's logger unless overridden with `WithLogger`:
+
+```go
+parent, _ := glue.NewWithOptions(
+    []glue.ContainerOption{glue.WithLogger(myLogger)},
+    &parentBean{},
+)
+// child inherits myLogger
+child, _ := parent.Extend(&childBean{})
+```
+
+### Custom logger example
+
+```go
+type slogAdapter struct {
+    logger *slog.Logger
+}
+
+func (a *slogAdapter) Enabled() bool { return true }
+
+func (a *slogAdapter) Printf(format string, v ...any) {
+    a.logger.Info(fmt.Sprintf(format, v...))
+}
+
+func (a *slogAdapter) Println(v ...any) {
+    a.logger.Info(fmt.Sprint(v...))
+}
+
+ctn, err := glue.NewWithOptions(
+    []glue.ContainerOption{
+        glue.WithLogger(&slogAdapter{logger: slog.Default()}),
+    },
+    &myBean{},
+)
+```
+
+When no logger is configured (no `WithLogger`, no `Verbose`, no parent logger), a built-in `nullLogger` is used that discards all output with zero overhead.
 
 ## Supported Bean Types
 

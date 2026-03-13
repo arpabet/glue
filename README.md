@@ -41,6 +41,7 @@ Common options:
 * `glue.WithContext(ctx)`
 * `glue.WithProperties(props)`
 * `glue.WithProfiles("dev", "local")`
+* `glue.WithLogger(logger)` — per-container diagnostic logging via `ContainerLogger` interface
 
 ## Documentation
 
@@ -66,6 +67,8 @@ Core features:
 * profiles and conditional bean registration
 * parent-child containers and lazy child containers
 * property sources, property resolvers, and resource sources
+* built-in `EnvPropertyResolver` for environment variable config (twelve-factor app)
+* per-container `ContainerLogger` with `WithLogger` option and parent inheritance
 
 Search constants:
 
