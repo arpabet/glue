@@ -192,25 +192,18 @@ func TestProperties(t *testing.T) {
 	require.Equal(t, expectedPropertiesNum, p.Len())
 
 	require.Equal(t, "string\n", p.GetString("example.str", ""))
-	require.Equal(t, 2, len(p.GetComments("example.str")))
 
 	require.Equal(t, 123, p.GetInt("example.int", 0))
-	require.Equal(t, 0, len(p.GetComments("example.int")))
 
 	require.Equal(t, true, p.GetBool("example.bool", false))
-	require.Equal(t, 0, len(p.GetComments("example.bool")))
 
 	require.Equal(t, float32(1.23), p.GetFloat("example.float", 0.0))
-	require.Equal(t, 0, len(p.GetComments("example.float")))
 
 	require.Equal(t, 1.23, p.GetDouble("example.double", 0.0))
-	require.Equal(t, 0, len(p.GetComments("example.double")))
 
 	require.Equal(t, time.Duration(300000000), p.GetDuration("example.duration", 0.0))
-	require.Equal(t, 0, len(p.GetComments("example.double")))
 
 	require.Equal(t, os.FileMode(0775), p.GetFileMode("example.filemode", os.FileMode(0775)))
-	require.Equal(t, 0, len(p.GetComments("example.filemode")))
 
 	/**
 	Test defaults

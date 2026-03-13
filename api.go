@@ -800,24 +800,9 @@ type Properties interface {
 	Remove(key string) bool
 
 	/*
-		Delete all properties and comments
+		Delete all properties
 	*/
 	Clear()
-
-	/*
-		Gets comments associated with property
-	*/
-	GetComments(key string) []string
-
-	/*
-		Sets comments associated with property
-	*/
-	SetComments(key string, comments []string)
-
-	/*
-		ClearComments removes the comments for all keys.
-	*/
-	ClearComments()
 }
 
 /*

@@ -45,6 +45,8 @@ Supported file formats:
 * `.yaml` / `.yml`
 * `.json`
 
+For `.properties`, comment lines are accepted during parsing and ignored. Glue no longer stores or re-emits property comments.
+
 Example:
 
 ```go

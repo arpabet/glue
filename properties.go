@@ -25,8 +25,7 @@ type properties struct {
 
 	priority int
 
-	store    map[string]string
-	comments map[string][]string
+	store map[string]string
 
 	resolvers []PropertyResolver
 
@@ -42,7 +41,6 @@ func NewPropertiesWithPriority(priority int) Properties {
 	t := &properties{
 		priority:  priority,
 		store:     make(map[string]string),
-		comments:  make(map[string][]string),
 		resolvers: make([]PropertyResolver, 0, 10),
 	}
 	t.Register(t)
@@ -52,7 +50,7 @@ func NewPropertiesWithPriority(priority int) Properties {
 func (t *properties) String() string {
 	t.RLock()
 	defer t.RUnlock()
-	return fmt.Sprintf("Properties{priority=%d,store=%d,comments=%d,resolvers=%d,errorHandler=%v}", t.priority, len(t.store), len(t.comments), len(t.resolvers), t.errorHandler != nil)
+	return fmt.Sprintf("Properties{priority=%d,store=%d,resolvers=%d,errorHandler=%v}", t.priority, len(t.store), len(t.resolvers), t.errorHandler != nil)
 }
 
 func (t *properties) Register(resolver PropertyResolver) {
@@ -114,7 +112,6 @@ func (t *properties) Save(writer io.Writer) (n int, err error) {
 
 func (t *properties) Parse(content string) error {
 	var key string
-	comments := make([]string, 0, 5)
 	var inside bool
 
 	t.Lock()
@@ -124,15 +121,11 @@ func (t *properties) Parse(content string) error {
 		switch item.typ {
 		case itemEOF:
 			if inside {
-				t.comments[key] = comments
 				t.store[key] = ""
 			}
 			break
 		case itemComment:
-			if inside {
-				return errors.Errorf("comment is not expected inside the property on key '%s'", key)
-			}
-			comments = append(comments, item.val)
+			continue
 		case itemKey:
 			if inside {
 				return errors.Errorf("key is not expected inside the property on key '%s'", key)
@@ -144,10 +137,6 @@ func (t *properties) Parse(content string) error {
 				return errors.Errorf("value is not expected outside of the property after key '%s'", key)
 			}
 			t.store[key] = item.val
-			if len(comments) > 0 {
-				t.comments[key] = comments
-				comments = make([]string, 0, 5)
-			}
 			inside = false
 		case itemError:
 			if inside {
@@ -172,17 +161,7 @@ func (t *properties) Dump() string {
 	for _, key := range keys {
 
 		if value, ok := t.store[key]; ok {
-
-			for _, comment := range t.comments[key] {
-				if len(comment) > 0 {
-					output.WriteString("# ")
-					output.WriteString(comment)
-					output.WriteByte('\n')
-				}
-			}
-
 			output.WriteString(fmt.Sprintf("%s = %s\n", encodeUtf8(key, " :"), encodeUtf8(value, "")))
-
 		}
 
 	}
@@ -395,7 +374,6 @@ func (t *properties) Remove(key string) bool {
 		return false
 	}
 	delete(t.store, key)
-	delete(t.comments, key)
 	return true
 }
 
@@ -403,25 +381,6 @@ func (t *properties) Clear() {
 	t.Lock()
 	defer t.Unlock()
 	t.store = make(map[string]string)
-	t.comments = make(map[string][]string)
-}
-
-func (t *properties) GetComments(key string) []string {
-	t.RLock()
-	defer t.RUnlock()
-	return t.comments[key]
-}
-
-func (t *properties) SetComments(key string, comments []string) {
-	t.Lock()
-	defer t.Unlock()
-	t.comments[key] = comments
-}
-
-func (t *properties) ClearComments() {
-	t.Lock()
-	defer t.Unlock()
-	t.comments = make(map[string][]string)
 }
 
 func encodeUtf8(s string, special string) string {
