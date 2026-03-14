@@ -56,6 +56,8 @@ Detailed documentation is organized under `docs/`:
 * [Build and Benchmark](docs/07-build-and-benchmark.md)
 * [Gluegen](docs/08-gluegen.md)
 * [Dependency Graph](docs/09-dependency-graph.md)
+* [Decorators](docs/10-decorators.md)
+* [Dynamic Properties](docs/11-dynamic-properties.md)
 
 ## Highlights
 
@@ -72,6 +74,8 @@ Core features:
 * `${key}` / `${key:default}` property expressions with raw and resolved access paths
 * built-in `EnvPropertyResolver` for environment variable config (twelve-factor app)
 * per-container `ContainerLogger` with `WithLogger` option and parent inheritance
+* decorator support with ordered application and automatic field updates
+* dynamic properties via `func() T`, `func() (T, error)`, and `func(context.Context) (T, error)` for live config
 * DOT-format dependency graph export via `Container.Graph()`
 
 Search constants:

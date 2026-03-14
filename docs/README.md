@@ -12,3 +12,5 @@ Chapters:
 * [07 Build and Benchmark](07-build-and-benchmark.md)
 * [08 Gluegen](08-gluegen.md)
 * [09 Dependency Graph](09-dependency-graph.md)
+* [10 Decorators](10-decorators.md)
+* [11 Dynamic Properties](11-dynamic-properties.md)
