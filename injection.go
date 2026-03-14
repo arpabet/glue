@@ -161,6 +161,11 @@ type propInjectionDef struct {
 	timeFormat string
 
 	/*
+		isMapPrefix is true when the field is map[string]string with value:"prefix=X"
+	*/
+	isMapPrefix bool
+
+	/*
 		dynamic is true when the field type is a function — property is resolved lazily on each call
 	*/
 	dynamic bool
@@ -545,6 +550,10 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 		return errors.Errorf("field '%s' in class '%v' is not public", t.fieldName, t.class)
 	}
 
+	if t.isMapPrefix {
+		return t.injectMapPrefix(field, properties)
+	}
+
 	if t.dynamic {
 		return t.injectDynamic(field, properties)
 	}
@@ -572,6 +581,41 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 	field.Set(v)
 	return nil
 
+}
+
+func (t *propInjectionDef) injectMapPrefix(field reflect.Value, properties Properties) error {
+	prefix := t.propertyName + "."
+	m := make(map[string]string)
+
+	// collect keys from the built-in property store
+	allKeys := properties.Keys()
+
+	// collect additional keys from EnumerablePropertyResolver instances
+	for _, r := range properties.PropertyResolvers() {
+		if enumerable, ok := r.(EnumerablePropertyResolver); ok {
+			allKeys = append(allKeys, enumerable.Keys()...)
+		}
+	}
+
+	// deduplicate and resolve
+	seen := make(map[string]bool, len(allKeys))
+	for _, key := range allKeys {
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		if strings.HasPrefix(key, prefix) {
+			suffix := key[len(prefix):]
+			if suffix == "" {
+				continue
+			}
+			if value, ok, err := properties.Resolve(key); err == nil && ok {
+				m[suffix] = value
+			}
+		}
+	}
+	field.Set(reflect.ValueOf(m))
+	return nil
 }
 
 func (t *propInjectionDef) injectDynamic(field reflect.Value, properties Properties) error {

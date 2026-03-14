@@ -77,3 +77,37 @@ func (r *EnvPropertyResolver) withPrefix(envKey string) string {
 	}
 	return envKey
 }
+
+// Keys returns all environment variables as property keys.
+// Env var names are converted back to property-style keys: uppercase underscores
+// become lowercase dots (e.g., "APP_DB_HOST" -> "app.db.host").
+// When Prefix is set, only env vars with that prefix are returned and the prefix is stripped.
+// When KeyMapper is set, reverse mapping is not possible and Keys returns nil.
+func (r *EnvPropertyResolver) Keys() []string {
+	if r.KeyMapper != nil {
+		return nil
+	}
+	prefix := r.Prefix
+	if prefix != "" {
+		prefix = prefix + "_"
+	}
+	var keys []string
+	for _, env := range os.Environ() {
+		k, _, ok := strings.Cut(env, "=")
+		if !ok {
+			continue
+		}
+		if prefix != "" {
+			if !strings.HasPrefix(k, prefix) {
+				continue
+			}
+			k = k[len(prefix):]
+		}
+		propKey := strings.ToLower(strings.ReplaceAll(k, "_", "."))
+		if r.MatchKey != nil && !r.MatchKey(propKey, k) {
+			continue
+		}
+		keys = append(keys, propKey)
+	}
+	return keys
+}

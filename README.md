@@ -22,19 +22,20 @@ Glue uses reflection at container startup. Direct pointer wiring is relatively c
 | Struct tag injection (+ bare tag) | Yes | No | No | No |
 | Generics API | Yes | N/A | No | Yes |
 | Property injection (static + dynamic func) | Yes | No | No | No |
-| Property expressions (${key:default}) | Yes | No | No | No |
+| Property prefix map (`value:"prefix=X"`) | Yes | No | No | No |
+| Property expressions (`${key:default}`) | Yes | No | No | No |
 | Env var resolver (built-in) | Yes | No | No | No |
-| Dynamic config refresh | Native | No | No | No |
+| Dynamic config via lazy properties | Yes | No | No | No |
 | Profiles with expressions | Yes | No | No | No |
 | Conditions | Yes | No | No | No |
 | Bean scopes (singleton/prototype/request) | Yes | No | Scopes | Transient/Lazy |
 | Decorators with ordering | Yes | No | Yes (Decorate) | No |
-| Bean post-processors | Yes | No | No | No |                                                                                                     
+| Bean post-processors | Yes | No | No | No |
 | Factory beans (+ context-aware) | Yes | Providers | Constructors | Providers |
 | Lifecycle hooks (+ context) | Yes | Cleanup | OnStart/OnStop | Shutdown |
-| Context hierarchy | Yes + levels | No | Scopes | Scopes |
-| Collection injection | Slice + Map + Ordered | No | Groups | No |
-| Graph visualization | DOT format | DOT format | DOT format | Explain |
+| Context hierarchy with levels | Yes | No | Scopes | Scopes |
+| Collection injection (slice + map + ordered) | Yes | No | Groups | No |
+| Graph visualization (DOT format) | Yes | Yes | Yes | Explain |
 | Component scanning | gluegen | Wire gen | No | No |
 | Compile-time validation | Via gluegen | Native | ValidateApp | No |
 | Gluegen decorator proxy gen | Yes | No | No | No |
@@ -43,7 +44,6 @@ Glue uses reflection at container startup. Direct pointer wiring is relatively c
 | Lazy injection | Yes | N/A | No | Yes |
 | Primary bean resolution | Yes | No | No | No |
 | Struct auto-wrapping | Yes | N/A | No | No |
-| Env var resolver | Built-in | No | No | No | 
 
 **Result:** Glue is the only Go DI framework that combines runtime reflection DI,
 type-safe generics API, built-in property management with dynamic refresh, profiles,

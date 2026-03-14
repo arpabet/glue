@@ -32,6 +32,56 @@ type config struct {
 }
 ```
 
+## Prefix Map Injection
+
+Use `value:"prefix=<name>"` on a `map[string]string` field to collect all properties that share a common prefix into a single map. The prefix and its trailing dot are stripped from the keys.
+
+```go
+type dbConfig struct {
+    DB map[string]string `value:"prefix=db"`
+}
+
+ctn, err := glue.New(
+    &glue.PropertySource{Map: map[string]any{
+        "db.host": "localhost",
+        "db.port": "5432",
+        "db.user": "admin",
+        "app.name": "myapp",
+    }},
+    &dbConfig{},
+)
+// cfg.DB = {"host": "localhost", "port": "5432", "user": "admin"}
+```
+
+Nested keys are preserved after the prefix is stripped:
+
+```go
+// "db.pool.max" = "10"  →  DB["pool.max"] = "10"
+// "db.pool.min" = "2"   →  DB["pool.min"] = "2"
+```
+
+Property expressions are resolved before values enter the map:
+
+```go
+// "app.name" = "myapp", "db.name" = "${app.name}_db"
+// →  DB["name"] = "myapp_db"
+```
+
+Multiple prefix maps can coexist in the same struct:
+
+```go
+type cfg struct {
+    DB    map[string]string `value:"prefix=db"`
+    Cache map[string]string `value:"prefix=cache"`
+}
+```
+
+Rules:
+* The field type must be `map[string]string`; any other type is an error.
+* An empty prefix (`value:"prefix="`) is an error.
+* The map is a snapshot taken at construction time. Later calls to `Properties.Set(...)` do not update it. Use `Container.Reload(bean)` to re-capture.
+* Only properties loaded from `PropertySource`, files, or maps are enumerable. Properties served exclusively by external `PropertyResolver` implementations are not included because their key sets are not discoverable.
+
 ## Property Expressions
 
 Glue supports Spring-style `${...}` placeholders in property values.

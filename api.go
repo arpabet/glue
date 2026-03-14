@@ -750,6 +750,21 @@ type PropertyResolver interface {
 }
 
 /*
+EnumerablePropertyResolver is an optional extension of PropertyResolver.
+Resolvers that can enumerate their keys implement this interface so that
+prefix map injection (value:"prefix=X") can discover keys beyond the
+built-in property store.
+*/
+type EnumerablePropertyResolver interface {
+	PropertyResolver
+
+	/*
+		Keys returns all property keys known to this resolver.
+	*/
+	Keys() []string
+}
+
+/*
 Use this bean to parse properties from file and place in container.
 Merge properties from multiple PropertySource files in to one Properties bean.
 For placeholder properties this bean used as a source of values.

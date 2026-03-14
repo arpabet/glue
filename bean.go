@@ -433,6 +433,26 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 			if propertyName == "" {
 				return nil, errors.Errorf("empty property name in field '%s' with type '%v' on position %d in %v with 'value' tag", field.Name, field.Type, j, classPtr)
 			}
+			// detect prefix map injection: value:"prefix=db" on map[string]string
+			if strings.HasPrefix(propertyName, "prefix=") {
+				prefixValue := strings.TrimSpace(propertyName[len("prefix="):])
+				if prefixValue == "" {
+					return nil, errors.Errorf("empty prefix in field '%s' with type '%v' in %v with 'value' tag", field.Name, field.Type, classPtr)
+				}
+				if field.Type.Kind() != reflect.Map || field.Type.Key().Kind() != reflect.String || field.Type.Elem().Kind() != reflect.String {
+					return nil, errors.Errorf("prefix map field '%s' in '%v' must be map[string]string", field.Name, classPtr)
+				}
+				properties = append(properties, &propInjectionDef{
+					class:        class,
+					fieldNum:     j,
+					fieldName:    field.Name,
+					fieldType:    field.Type,
+					propertyName: prefixValue,
+					isMapPrefix:  true,
+				})
+				continue
+			}
+
 			def := &propInjectionDef{
 				class:           class,
 				fieldNum:        j,
