@@ -574,6 +574,14 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 	}
 
 	/**
+	Apply post-processors
+	*/
+	if err := c.applyPostProcessors(); err != nil {
+		c.closeWithTimeout(DefaultCloseTimeout)
+		return nil, err
+	}
+
+	/**
 	PostConstruct beans
 	*/
 	if err := c.postConstruct(options.Context, primaryList, secondaryList); err != nil {

@@ -632,6 +632,25 @@ type PrimaryBean interface {
 	IsPrimaryBean() bool
 }
 
+var BeanPostProcessorClass = reflect.TypeOf((*BeanPostProcessor)(nil)).Elem()
+
+/*
+BeanPostProcessor is called for every non-processor bean after decoration
+but before PostConstruct. Use it for cross-cutting concerns that need to
+inspect all beans without wrapping them — for example registering HTTP handlers,
+validating configuration, or wiring beans into external systems.
+
+PostProcessors are collected during scanning and applied in OrderedBean order.
+Returning an error fails container creation.
+*/
+type BeanPostProcessor interface {
+
+	/*
+		PostProcessBean receives the fully injected (and possibly decorated) bean.
+	*/
+	PostProcessBean(bean any, name string) error
+}
+
 var DecoratorClass = reflect.TypeOf((*Decorator)(nil)).Elem()
 
 /*

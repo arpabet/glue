@@ -75,6 +75,7 @@ Core features:
 * built-in `EnvPropertyResolver` for environment variable config (twelve-factor app)
 * per-container `ContainerLogger` with `WithLogger` option and parent inheritance
 * decorator support with ordered application and automatic field updates
+* bean post-processors for cross-cutting concerns (handler registration, validation, metrics)
 * dynamic properties via `func() T`, `func() (T, error)`, and `func(context.Context) (T, error)` for live config
 * DOT-format dependency graph export via `Container.Graph()`
 

@@ -64,6 +64,71 @@ Context source:
 
 Child containers created via `glue.Child(...)` receive the same close context when the parent is closed with `CloseWithContext(ctx)`.
 
+## Bean Post-Processors
+
+### `glue.BeanPostProcessor`
+
+A `BeanPostProcessor` is called for every non-processor bean after decoration but before `PostConstruct`. Use it for cross-cutting concerns that need to inspect all beans without wrapping them.
+
+```go
+type BeanPostProcessor interface {
+    PostProcessBean(bean any, name string) error
+}
+```
+
+Post-processors are collected during scanning and applied in `OrderedBean` order. Returning an error fails container creation. Post-processor beans are skipped when iterating targets (processors do not process other processors).
+
+### Auto-register HTTP handlers
+
+```go
+type handlerRegistrar struct {
+    Router *router `inject`
+}
+
+func (r *handlerRegistrar) PostProcessBean(bean any, name string) error {
+    if h, ok := bean.(HTTPHandler); ok {
+        r.Router.Handle(h.Pattern(), h)
+    }
+    return nil
+}
+```
+
+### Validate configuration
+
+```go
+type configValidator struct{}
+
+func (v *configValidator) PostProcessBean(bean any, name string) error {
+    if c, ok := bean.(Configurable); ok {
+        return c.Validate()
+    }
+    return nil
+}
+```
+
+### Metrics registration
+
+```go
+type metricsRegistrar struct {
+    Registry *prometheus.Registry `inject`
+}
+
+func (r *metricsRegistrar) PostProcessBean(bean any, name string) error {
+    if c, ok := bean.(prometheus.Collector); ok {
+        r.Registry.MustRegister(c)
+    }
+    return nil
+}
+```
+
+Post-processors can have `inject` fields — they are injected during the normal injection phase. Their own `PostConstruct` runs after all post-processing is done, in the same lifecycle as all other beans.
+
+### Lifecycle Order
+
+```
+Scan → Inject → Decorate → PostProcess → PostConstruct → Ready
+```
+
 ## Reload
 
 `Container.Reload(bean)` and `Container.ReloadWithContext(ctx, bean)` re-run static property resolution and lifecycle for ordinary managed beans.
