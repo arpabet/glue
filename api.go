@@ -299,6 +299,12 @@ type Container interface {
 	Properties() Properties
 
 	/*
+		Graph returns a DOT-format dependency graph of the container.
+		The output can be rendered with Graphviz.
+	*/
+	Graph() string
+
+	/*
 		Returns information about container
 	*/
 	String() string
