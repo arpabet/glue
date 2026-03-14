@@ -312,6 +312,13 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 		}()
 
 		switch classPtr.Kind() {
+		case reflect.Struct:
+			// auto-wrap struct value to pointer
+			ptr := reflect.New(classPtr)
+			ptr.Elem().Set(reflect.ValueOf(obj))
+			obj = ptr.Interface()
+			classPtr = reflect.TypeOf(obj)
+			fallthrough
 		case reflect.Ptr:
 			/**
 			New bean from object

@@ -81,13 +81,14 @@ func TestSearchBeanByPointerNotFound(t *testing.T) {
 
 func TestBeanByStruct(t *testing.T) {
 
+	// struct values are auto-wrapped to pointers by the container
 	ctx, err := glue.New(
 		firstBean{},
 		&secondBean{testing: t},
 	)
-	require.Error(t, err)
-	require.Nil(t, ctx)
-	require.True(t, strings.Contains(err.Error(), "must be a pointer"))
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
+	defer ctx.Close()
 
 }
 
