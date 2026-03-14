@@ -263,23 +263,23 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			if _, ok := interfaces[ChildContainerClass]; !ok {
 				interfaces[ChildContainerClass] = []*injection{}
 			}
-		case ResourceSource:
-			c.logger.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
-			ptr := &instance
-			if err := c.resourceSources.addResourceSource(ptr); err != nil {
-				return err
-			}
-			obj = ptr
+		//case ResourceSource:
+		//	c.logger.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
+		//	ptr := &instance
+		//	if err := c.resourceSources.addResourceSource(ptr); err != nil {
+		//		return err
+		//	}
+		//	obj = ptr
 		case *ResourceSource:
 			c.logger.Printf("ResourceSource %s, assets %+v\n", instance.Name, instance.AssetNames)
 			if err := c.resourceSources.addResourceSource(instance); err != nil {
 				return err
 			}
-		case PropertySource:
-			c.logger.Printf("PropertySource %s %d\n", instance.File, len(instance.Map))
-			ptr := &instance
-			propertySources = append(propertySources, ptr)
-			obj = ptr
+		//case PropertySource:
+		//	c.logger.Printf("PropertySource %s %d\n", instance.File, len(instance.Map))
+		//	ptr := &instance
+		//	propertySources = append(propertySources, ptr)
+		//	obj = ptr
 		case *PropertySource:
 			c.logger.Printf("PropertySource %s %d\n", instance.File, len(instance.Map))
 			propertySources = append(propertySources, instance)
@@ -312,13 +312,6 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 		}()
 
 		switch classPtr.Kind() {
-		case reflect.Struct:
-			// auto-wrap struct value to pointer
-			ptr := reflect.New(classPtr)
-			ptr.Elem().Set(reflect.ValueOf(obj))
-			obj = ptr.Interface()
-			classPtr = reflect.TypeOf(obj)
-			fallthrough
 		case reflect.Ptr:
 			/**
 			New bean from object
@@ -693,11 +686,7 @@ func registerBean(core map[reflect.Type][]*bean, localNames map[string][]*bean, 
 }
 
 func forEach(active map[string]struct{}, initialPos string, scan []any, cb func(i string, obj any) error) error {
-	// Use a map to track visited objects by their pointer address and type
-	visited := make(map[visitedKey]bool)
-
-	// Call helper function with visited map
-	return forEachRecursive(active, initialPos, scan, cb, visited)
+	return forEachRecursive(active, initialPos, scan, cb, newVisitState())
 }
 
 /*
@@ -766,25 +755,55 @@ type visitedKey struct {
 	typ  reflect.Type
 }
 
-func forEachRecursive(active map[string]struct{}, initialPos string, scan []any, cb func(i string, obj any) error, visited map[visitedKey]bool) error {
+type visitState struct {
+	seenPointers     map[uintptr]struct{}
+	seenZeroPointers map[visitedKey]struct{}
+}
+
+func newVisitState() *visitState {
+	return &visitState{
+		seenPointers:     make(map[uintptr]struct{}),
+		seenZeroPointers: make(map[visitedKey]struct{}),
+	}
+}
+
+func (t *visitState) markVisited(obj any) bool {
+	if !isTrackableReference(obj) {
+		return false
+	}
+
+	value := reflect.ValueOf(obj)
+	if usesTypedVisitKey(value) {
+		key := visitedKey{addr: value.Pointer(), typ: value.Type()}
+		if _, ok := t.seenZeroPointers[key]; ok {
+			return true
+		}
+		t.seenZeroPointers[key] = struct{}{}
+		return false
+	}
+
+	key := value.Pointer()
+	if _, ok := t.seenPointers[key]; ok {
+		return true
+	}
+	t.seenPointers[key] = struct{}{}
+	return false
+}
+
+func forEachRecursive(active map[string]struct{}, initialPos string, scan []any, cb func(i string, obj any) error, visited *visitState) error {
 	for j, item := range scan {
 
 		if item == nil {
 			continue
 		}
 
-		// Check if this is a pointer type that we can track
-		if isPointer(item) {
-			v := reflect.ValueOf(item)
-			key := visitedKey{addr: v.Pointer(), typ: v.Type()}
+		if visited.markVisited(item) {
+			continue
+		}
 
-			// Skip if already visited
-			if visited[key] {
-				continue
-			}
-
-			// Mark as visited
-			visited[key] = true
+		item = normalizeScanItem(item)
+		if item == nil {
+			continue
 		}
 
 		if profileBean, ok := item.(ProfileBean); ok {
@@ -826,18 +845,39 @@ func forEachRecursive(active map[string]struct{}, initialPos string, scan []any,
 	return nil
 }
 
-// Helper function to check if an object is a pointer or interface that can be tracked
-func isPointer(obj any) bool {
+func normalizeScanItem(obj any) any {
+	if obj == nil {
+		return nil
+	}
+
+	value := reflect.ValueOf(obj)
+	if value.Kind() != reflect.Struct {
+		return obj
+	}
+
+	ptr := reflect.New(value.Type())
+	ptr.Elem().Set(value)
+	return ptr.Interface()
+}
+
+func isTrackableReference(obj any) bool {
 	if obj == nil {
 		return false
 	}
 
-	kind := reflect.ValueOf(obj).Kind()
+	kind := reflect.TypeOf(obj).Kind()
 	return kind == reflect.Ptr ||
 		kind == reflect.Map ||
 		kind == reflect.Chan ||
-		kind == reflect.Func ||
 		kind == reflect.UnsafePointer
+}
+
+func usesTypedVisitKey(value reflect.Value) bool {
+	if value.Kind() != reflect.Ptr {
+		return false
+	}
+	elem := value.Type().Elem()
+	return elem.Kind() == reflect.Struct && elem.Size() == 0
 }
 
 func (t *container) Core() []reflect.Type {
