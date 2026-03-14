@@ -69,6 +69,7 @@ Core features:
 * profiles and conditional bean registration
 * parent-child containers and lazy child containers
 * property sources, property resolvers, and resource sources
+* `${key}` / `${key:default}` property expressions with raw and resolved access paths
 * built-in `EnvPropertyResolver` for environment variable config (twelve-factor app)
 * per-container `ContainerLogger` with `WithLogger` option and parent inheritance
 * DOT-format dependency graph export via `Container.Graph()`

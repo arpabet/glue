@@ -32,6 +32,38 @@ type config struct {
 }
 ```
 
+## Property Expressions
+
+Glue supports Spring-style `${...}` placeholders in property values.
+
+Supported syntax:
+* `${key}`: resolve another property
+* `${key:default}`: resolve another property or use the default text
+
+Example:
+
+```properties
+app.name=myapp
+app.log.dir=/var/log/${app.name}
+app.port=${APP_PORT:8080}
+```
+
+```go
+type config struct {
+    LogDir string `value:"app.log.dir"`
+    Port   int    `value:"app.port"`
+}
+```
+
+Important behavior:
+* `Properties.Get(key)` returns the raw value without expression expansion
+* `Properties.Resolve(key)` returns the resolved value
+* `Properties.ResolveText(text)` resolves placeholders in arbitrary text
+* `value:"..."` injection uses resolved values
+* typed property getters such as `GetString`, `GetInt`, and the generic `glue.GetProperty[T]` also use resolved values
+
+Cycle detection is enabled. A loop like `a=${b}`, `b=${a}` returns an error.
+
 ## Property Sources
 
 Glue can load properties from:
@@ -120,6 +152,25 @@ ctn, err := glue.New(
     &config{},
 )
 ```
+
+With a match gate to limit environment lookup to specific key patterns:
+
+```go
+ctn, err := glue.New(
+    &glue.EnvPropertyResolver{
+        MatchKey: glue.OnlyEnvStyle,
+    },
+    &config{},
+)
+```
+
+In that mode:
+* `APP_PORT` can resolve from the environment
+* `app.port` does not consult the environment
+* file/map properties can still provide `app.port`
+* if `Prefix` is set, the match still happens against the unprefixed normalized env key, and the prefix is added only for the final environment lookup
+
+This is useful when you want `${APP_PORT:8080}`-style expressions without making every property key env-aware.
 
 Priority:
 * higher number = higher precedence

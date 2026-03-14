@@ -808,6 +808,16 @@ type Properties interface {
 	Get(key string) (value string, ok bool)
 
 	/*
+		Resolve gets a property value and expands ${key} and ${key:default} expressions.
+	*/
+	Resolve(key string) (value string, ok bool, err error)
+
+	/*
+		ResolveText expands ${key} and ${key:default} expressions in arbitrary text.
+	*/
+	ResolveText(text string) (string, error)
+
+	/*
 		Additional getters with type conversion
 	*/
 	GetString(key, def string) string

@@ -35,6 +35,15 @@ type EnvPropertyResolver struct {
 	// When set, Prefix is ignored.
 	// Receives the property key (e.g., "app.db.host") and returns the env var name.
 	KeyMapper func(key string) string
+
+	// MatchKey limits which property keys participate in environment lookup.
+	// When set and it returns false, GetProperty returns no value without
+	// consulting the environment.
+	MatchKey func(propKey, envKey string) bool
+}
+
+func OnlyEnvStyle(propKey, envKey string) bool {
+	return propKey == envKey
 }
 
 func (r *EnvPropertyResolver) Priority() int {
@@ -46,7 +55,10 @@ func (r *EnvPropertyResolver) Priority() int {
 
 func (r *EnvPropertyResolver) GetProperty(key string) (string, bool) {
 	envKey := r.toEnvKey(key)
-	return os.LookupEnv(envKey)
+	if r.MatchKey != nil && !r.MatchKey(key, envKey) {
+		return "", false
+	}
+	return os.LookupEnv(r.withPrefix(envKey))
 }
 
 func (r *EnvPropertyResolver) toEnvKey(key string) string {
@@ -56,6 +68,10 @@ func (r *EnvPropertyResolver) toEnvKey(key string) string {
 	envKey := strings.ToUpper(key)
 	envKey = strings.ReplaceAll(envKey, ".", "_")
 	envKey = strings.ReplaceAll(envKey, "-", "_")
+	return envKey
+}
+
+func (r *EnvPropertyResolver) withPrefix(envKey string) string {
 	if r.Prefix != "" {
 		return r.Prefix + "_" + envKey
 	}

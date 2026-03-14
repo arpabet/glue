@@ -65,6 +65,39 @@ func TestEnvPropertyResolver_CustomKeyMapper(t *testing.T) {
 	require.Equal(t, "custom-value", value)
 }
 
+func TestEnvPropertyResolver_MatchKey_AllowsOnlyMatchingKeys(t *testing.T) {
+	os.Setenv("APP_PORT", "9090")
+	defer os.Unsetenv("APP_PORT")
+
+	r := &glue.EnvPropertyResolver{
+		MatchKey: glue.OnlyEnvStyle,
+	}
+
+	value, ok := r.GetProperty("APP_PORT")
+	require.True(t, ok)
+	require.Equal(t, "9090", value)
+
+	_, ok = r.GetProperty("app.port")
+	require.False(t, ok)
+}
+
+func TestEnvPropertyResolver_OnlyEnvStyleWorksWithPrefix(t *testing.T) {
+	os.Setenv("MYAPP_APP_PORT", "9090")
+	defer os.Unsetenv("MYAPP_APP_PORT")
+
+	r := &glue.EnvPropertyResolver{
+		Prefix:   "MYAPP",
+		MatchKey: glue.OnlyEnvStyle,
+	}
+
+	value, ok := r.GetProperty("APP_PORT")
+	require.True(t, ok)
+	require.Equal(t, "9090", value)
+
+	_, ok = r.GetProperty("app.port")
+	require.False(t, ok)
+}
+
 func TestEnvPropertyResolver_DefaultPriority(t *testing.T) {
 	r := &glue.EnvPropertyResolver{}
 	require.Equal(t, 200, r.Priority())
@@ -128,4 +161,29 @@ func TestEnvPropertyResolver_WithPropertiesAndEnv(t *testing.T) {
 
 	// Env resolver (priority 200) wins over file properties (priority 100)
 	require.Equal(t, "env-host", cfg.Host)
+}
+
+func TestEnvPropertyResolver_WithPropertiesAndStrictMatchKey(t *testing.T) {
+	os.Setenv("APP_PORT", "9090")
+	defer os.Unsetenv("APP_PORT")
+
+	type config struct {
+		Port string `value:"app.port,default=8080"`
+	}
+
+	props := glue.NewProperties()
+	props.Set("app.port", "7000")
+
+	cfg := &config{}
+	ctx, err := glue.NewWithOptions(
+		[]glue.ContainerOption{glue.WithProperties(props)},
+		&glue.EnvPropertyResolver{
+			MatchKey: glue.OnlyEnvStyle,
+		},
+		cfg,
+	)
+	require.NoError(t, err)
+	defer ctx.Close()
+
+	require.Equal(t, "7000", cfg.Port)
 }

@@ -7,7 +7,6 @@ package glue
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,6 +16,8 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
+
+	"github.com/pkg/errors"
 )
 
 // Properties contains the key/value pairs from the properties input.
@@ -252,8 +253,22 @@ func (t *properties) Get(key string) (value string, ok bool) {
 	return "", false
 }
 
+func (t *properties) Resolve(key string) (value string, ok bool, err error) {
+	return t.resolveKey(key, nil)
+}
+
+func (t *properties) ResolveText(text string) (string, error) {
+	return t.resolveText(text, nil)
+}
+
 func (t *properties) GetString(key, def string) string {
-	if value, ok := t.Get(key); ok {
+	if value, ok, err := t.Resolve(key); err != nil {
+		cb := t.GetErrorHandler()
+		if cb != nil {
+			cb(key, err)
+		}
+		return def
+	} else if ok {
 		return value
 	} else {
 		return def
@@ -273,7 +288,13 @@ func (t *properties) SetErrorHandler(onError func(string, error)) {
 }
 
 func (t *properties) GetBool(key string, def bool) bool {
-	if value, ok := t.Get(key); ok {
+	if value, ok, err := t.Resolve(key); err != nil {
+		cb := t.GetErrorHandler()
+		if cb != nil {
+			cb(key, err)
+		}
+		return def
+	} else if ok {
 		if v, err := parseBool(value); err != nil {
 			cb := t.GetErrorHandler()
 			if cb != nil {
@@ -289,7 +310,13 @@ func (t *properties) GetBool(key string, def bool) bool {
 }
 
 func (t *properties) GetInt(key string, def int) int {
-	if value, ok := t.Get(key); ok {
+	if value, ok, err := t.Resolve(key); err != nil {
+		cb := t.GetErrorHandler()
+		if cb != nil {
+			cb(key, err)
+		}
+		return def
+	} else if ok {
 		if v, err := strconv.Atoi(value); err != nil {
 			cb := t.GetErrorHandler()
 			if cb != nil {
@@ -305,7 +332,13 @@ func (t *properties) GetInt(key string, def int) int {
 }
 
 func (t *properties) GetFloat(key string, def float32) float32 {
-	if value, ok := t.Get(key); ok {
+	if value, ok, err := t.Resolve(key); err != nil {
+		cb := t.GetErrorHandler()
+		if cb != nil {
+			cb(key, err)
+		}
+		return def
+	} else if ok {
 		if f, err := strconv.ParseFloat(value, 32); err != nil {
 			cb := t.GetErrorHandler()
 			if cb != nil {
@@ -321,7 +354,13 @@ func (t *properties) GetFloat(key string, def float32) float32 {
 }
 
 func (t *properties) GetDouble(key string, def float64) float64 {
-	if value, ok := t.Get(key); ok {
+	if value, ok, err := t.Resolve(key); err != nil {
+		cb := t.GetErrorHandler()
+		if cb != nil {
+			cb(key, err)
+		}
+		return def
+	} else if ok {
 		if f, err := strconv.ParseFloat(value, 64); err != nil {
 			cb := t.GetErrorHandler()
 			if cb != nil {
@@ -337,7 +376,13 @@ func (t *properties) GetDouble(key string, def float64) float64 {
 }
 
 func (t *properties) GetDuration(key string, def time.Duration) time.Duration {
-	if str, ok := t.Get(key); ok {
+	if str, ok, err := t.Resolve(key); err != nil {
+		cb := t.GetErrorHandler()
+		if cb != nil {
+			cb(key, err)
+		}
+		return def
+	} else if ok {
 		if value, err := time.ParseDuration(str); err != nil {
 			cb := t.GetErrorHandler()
 			if cb != nil {
@@ -353,11 +398,89 @@ func (t *properties) GetDuration(key string, def time.Duration) time.Duration {
 }
 
 func (t *properties) GetFileMode(key string, def os.FileMode) os.FileMode {
-	if str, ok := t.Get(key); ok {
+	if str, ok, err := t.Resolve(key); err != nil {
+		cb := t.GetErrorHandler()
+		if cb != nil {
+			cb(key, err)
+		}
+		return def
+	} else if ok {
 		return parseFileMode(str)
 	} else {
 		return def
 	}
+}
+
+func (t *properties) resolveKey(key string, stack []string) (string, bool, error) {
+	for _, item := range stack {
+		if item == key {
+			return "", false, errors.Errorf("circular property reference: %s", strings.Join(append(stack, key), " -> "))
+		}
+	}
+
+	raw, ok := t.Get(key)
+	if !ok {
+		return "", false, nil
+	}
+
+	resolved, err := t.resolveText(raw, append(stack, key))
+	if err != nil {
+		return "", false, err
+	}
+	return resolved, true, nil
+}
+
+func (t *properties) resolveText(text string, stack []string) (string, error) {
+	if !strings.Contains(text, "${") {
+		return text, nil
+	}
+
+	var output strings.Builder
+	for pos := 0; pos < len(text); {
+		start := strings.Index(text[pos:], "${")
+		if start < 0 {
+			output.WriteString(text[pos:])
+			break
+		}
+		start += pos
+		output.WriteString(text[pos:start])
+
+		end := strings.IndexByte(text[start+2:], '}')
+		if end < 0 {
+			return "", errors.Errorf("unterminated property expression in '%s'", text)
+		}
+		end += start + 2
+
+		expr := text[start+2 : end]
+		if expr == "" {
+			return "", errors.Errorf("empty property expression in '%s'", text)
+		}
+
+		key, def, hasDefault := strings.Cut(expr, ":")
+		key = strings.TrimSpace(key)
+		if key == "" {
+			return "", errors.Errorf("empty property expression in '%s'", text)
+		}
+
+		value, ok, err := t.resolveKey(key, stack)
+		if err != nil {
+			return "", err
+		}
+		if !ok {
+			if !hasDefault {
+				return "", errors.Errorf("property '%s' not found", key)
+			}
+			value, err = t.resolveText(def, stack)
+			if err != nil {
+				return "", err
+			}
+		}
+
+		output.WriteString(value)
+		pos = end + 1
+	}
+
+	return output.String(), nil
 }
 
 func (t *properties) Set(key string, value string) {

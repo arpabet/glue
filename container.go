@@ -178,7 +178,7 @@ func getActiveProfiles(properties Properties) []string {
 	if properties == nil {
 		return profiles
 	}
-	if commaListStr, ok := properties.Get(ActiveProfilesProperty); ok {
+	if commaListStr, ok, err := properties.Resolve(ActiveProfilesProperty); err == nil && ok {
 		for _, part := range strings.Split(commaListStr, ",") {
 			profile := strings.TrimSpace(part)
 			if profile != "" {

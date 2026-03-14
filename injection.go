@@ -550,10 +550,16 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 	}
 
 	var strValue string
-	if value, ok := properties.Get(t.propertyName); ok {
+	if value, ok, err := properties.Resolve(t.propertyName); err != nil {
+		return errors.Errorf("property '%s' in class '%v' resolution error, property resolvers %+v, %v", t.fieldName, t.class, properties.PropertyResolvers(), err)
+	} else if ok {
 		strValue = value
 	} else if t.hasDefaultValue {
-		strValue = t.defaultValue
+		value, err := properties.ResolveText(t.defaultValue)
+		if err != nil {
+			return errors.Errorf("property '%s' in class '%v' default resolution error, property resolvers %+v, %v", t.fieldName, t.class, properties.PropertyResolvers(), err)
+		}
+		strValue = value
 	} else {
 		return errors.Errorf("property '%s' in class '%v' does not have the default value, and did not find in property resolvers %+v", t.fieldName, t.class, properties.PropertyResolvers())
 	}
@@ -575,14 +581,20 @@ func (t *propInjectionDef) injectDynamic(field reflect.Value, properties Propert
 	timeFormat := t.timeFormat
 	returnType := t.funcReturnType
 
-	resolve := func() (string, bool) {
-		if val, ok := properties.Get(propertyName); ok {
-			return val, true
+	resolve := func() (string, bool, error) {
+		if val, ok, err := properties.Resolve(propertyName); err != nil {
+			return "", false, err
+		} else if ok {
+			return val, true, nil
 		}
 		if hasDefaultValue {
-			return defaultValue, true
+			val, err := properties.ResolveText(defaultValue)
+			if err != nil {
+				return "", false, err
+			}
+			return val, true, nil
 		}
-		return "", false
+		return "", false, nil
 	}
 
 	convert := func(s string) (reflect.Value, error) {
@@ -598,7 +610,10 @@ func (t *propInjectionDef) injectDynamic(field reflect.Value, properties Propert
 	case t.funcTakesContext:
 		// func(container.Container) (T, error)
 		fn = reflect.MakeFunc(t.fieldType, func(args []reflect.Value) []reflect.Value {
-			str, ok := resolve()
+			str, ok, err := resolve()
+			if err != nil {
+				return []reflect.Value{zeroReturn, reflect.ValueOf(err)}
+			}
 			if !ok {
 				return []reflect.Value{zeroReturn, reflect.ValueOf(fmt.Errorf("property '%s' not found and has no default value", propertyName))}
 			}
@@ -612,7 +627,10 @@ func (t *propInjectionDef) injectDynamic(field reflect.Value, properties Propert
 	case t.funcReturnsError:
 		// func() (T, error)
 		fn = reflect.MakeFunc(t.fieldType, func(args []reflect.Value) []reflect.Value {
-			str, ok := resolve()
+			str, ok, err := resolve()
+			if err != nil {
+				return []reflect.Value{zeroReturn, reflect.ValueOf(err)}
+			}
 			if !ok {
 				return []reflect.Value{zeroReturn, reflect.ValueOf(fmt.Errorf("property '%s' not found and has no default value", propertyName))}
 			}
@@ -626,7 +644,10 @@ func (t *propInjectionDef) injectDynamic(field reflect.Value, properties Propert
 	default:
 		// func() T — default= is guaranteed at construction time, so resolve() always returns true.
 		fn = reflect.MakeFunc(t.fieldType, func(args []reflect.Value) []reflect.Value {
-			str, ok := resolve()
+			str, ok, err := resolve()
+			if err != nil {
+				panic(fmt.Sprintf("property '%s' resolution error: %v", propertyName, err))
+			}
 			if !ok {
 				return []reflect.Value{zeroReturn}
 			}

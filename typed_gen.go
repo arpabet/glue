@@ -62,7 +62,10 @@ func GetBeans[T any](c Container) []T {
 func GetProperty[T any](c Container, key string) (T, error) {
 	var zero T
 	props := c.Properties()
-	value, ok := props.Get(key)
+	value, ok, err := props.Resolve(key)
+	if err != nil {
+		return zero, err
+	}
 	if !ok {
 		return zero, errors.Errorf("property '%s' not found", key)
 	}
