@@ -1,5 +1,7 @@
 # Properties
 
+This chapter is a focused overview. For the current reference, including expression support and `EnvPropertyResolver` behavior, see [Properties and Resources](06-properties-and-resources.md).
+
 ## Static Properties
 
 Use the `value` tag to inject property values into bean fields.
@@ -44,6 +46,25 @@ type config struct {
 
 Values are separated by semicolons: `server.hosts=host1;host2;host3`.
 
+## Property Expressions
+
+Glue supports `${...}` placeholders in property values.
+
+```properties
+app.name=myapp
+app.log.dir=/var/log/${app.name}
+app.port.override=9090
+app.port=${app.port.override:8080}
+```
+
+Important behavior:
+* `Properties.Get(key)` returns the raw value
+* `Properties.Resolve(key)` returns the resolved value
+* `value:"..."` injection uses resolved values
+* dynamic property functions also resolve expressions on each call
+
+To resolve env-style placeholders such as `${APP_PORT:8080}`, use `EnvPropertyResolver` with `MatchKey: glue.OnlyEnvStyle`.
+
 ## Dynamic Properties
 
 Use function-typed fields to read properties lazily on each call.
@@ -69,8 +90,8 @@ Properties can be loaded from files or maps:
 
 ```go
 ctn, err := glue.New(
-    &PropertySource{File: "file:config.properties"},
-    &PropertySource{Map: map[string]interface{}{
+    &glue.PropertySource{File: "file:config.properties"},
+    &glue.PropertySource{Map: map[string]any{
         "server.host": "localhost",
         "server.port": 8080,
     }},

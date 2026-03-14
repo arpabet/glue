@@ -45,7 +45,8 @@ Example:
 ```properties
 app.name=myapp
 app.log.dir=/var/log/${app.name}
-app.port=${APP_PORT:8080}
+app.port.override=9090
+app.port=${app.port.override:8080}
 ```
 
 ```go
@@ -53,6 +54,17 @@ type config struct {
     LogDir string `value:"app.log.dir"`
     Port   int    `value:"app.port"`
 }
+```
+
+To resolve an env-style placeholder like `${APP_PORT:8080}`, register `EnvPropertyResolver` with a strict match gate:
+
+```go
+ctn, err := glue.New(
+    &glue.EnvPropertyResolver{
+        MatchKey: glue.OnlyEnvStyle,
+    },
+    &config{},
+)
 ```
 
 Important behavior:
