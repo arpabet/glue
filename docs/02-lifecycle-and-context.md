@@ -123,10 +123,62 @@ func (r *metricsRegistrar) PostProcessBean(bean any, name string) error {
 
 Post-processors can have `inject` fields — they are injected during the normal injection phase. Their own `PostConstruct` runs after all post-processing is done, in the same lifecycle as all other beans.
 
-### Lifecycle Order
+**Lifecycle position:**
 
 ```
 Scan → Inject → Decorate → PostProcess → PostConstruct → Ready
+```
+
+PostProcessors run after decorators (so they see the final decorated value) but before
+PostConstruct (so beans aren't yet active when post-processing happens).
+
+**Example 1: Auto-register HTTP handlers**
+
+```go
+type handlerRegistrar struct {
+    Router *router `inject`
+    count  int
+}
+
+func (r *handlerRegistrar) PostProcessBean(bean any, name string) error {
+    if h, ok := bean.(HTTPHandler); ok {
+        r.Router.Handle(h.Pattern(), h)
+        r.count++
+    }
+    return nil
+}
+
+func (r *handlerRegistrar) BeanOrder() int { return 100 } // run after other post-processors
+```
+
+**Example 2: Validate configuration**
+
+```go
+type configValidator struct{}
+
+func (v *configValidator) PostProcessBean(bean any, name string) error {
+    if c, ok := bean.(Configurable); ok {
+        if err := c.Validate(); err != nil {
+            return fmt.Errorf("bean '%s' has invalid configuration: %w", name, err)
+        }
+    }
+    return nil
+}
+```
+
+**Example 3: Metrics registration**
+
+```go
+type metricsRegistrar struct {
+    Registry *prometheus.Registry `inject`
+}
+
+func (r *metricsRegistrar) PostProcessBean(bean any, name string) error {
+    if c, ok := bean.(prometheus.Collector); ok {
+        r.Registry.MustRegister(c)
+    }
+    return nil
+}
 ```
 
 ## Reload
