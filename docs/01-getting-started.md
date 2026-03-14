@@ -119,9 +119,23 @@ When no logger is configured (no `WithLogger`, no `Verbose`, no parent logger), 
 
 Glue supports:
 * pointers
+* struct values (auto-wrapped to pointers)
 * interfaces
 
-Struct values are not supported as registered beans. Register pointers instead.
+Struct values passed to `glue.New()` are automatically wrapped to pointers by the container. This is useful for registering pre-built values such as external library objects or configuration structs without explicitly taking their address:
+
+```go
+type AppConfig struct {
+    Host string
+    Port int
+}
+
+cfg := AppConfig{Host: "localhost", Port: 8080}
+ctn, err := glue.New(cfg, &myService{})
+```
+
+The container allocates a pointer and copies the value, so the result is equivalent to passing `&cfg`. Since Go already copies the struct to the heap when boxing it as `any`, there is no extra overhead.
+
 Functions are not registered as beans; use factory beans or struct providers. Scoped providers still use function-typed fields (for `scope=prototype` / `scope=request`).
 
 ## Injection Basics
