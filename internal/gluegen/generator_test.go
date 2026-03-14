@@ -20,19 +20,18 @@ func TestGeneratePackageGlueGen(t *testing.T) {
 		t.Fatal("runtime.Caller failed")
 	}
 	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", ".."))
+	tmpRoot, err := os.MkdirTemp(filepath.Join(repoRoot, "internal", "gluegen"), "tmpgen-")
+	if err != nil {
+		t.Fatalf("MkdirTemp failed: %v", err)
+	}
+	defer os.RemoveAll(tmpRoot)
 
-	tmp := t.TempDir()
-	writeFile(t, filepath.Join(tmp, "go.mod"), strings.Join([]string{
-		"module example.com/app",
-		"",
-		"go 1.18",
-		"",
-		"require go.arpabet.com/glue v0.0.0",
-		"replace go.arpabet.com/glue => " + repoRoot,
-		"",
-	}, "\n"))
+	relPkgDir, err := filepath.Rel(repoRoot, filepath.Join(tmpRoot, "services"))
+	if err != nil {
+		t.Fatalf("filepath.Rel failed: %v", err)
+	}
 
-	writeFile(t, filepath.Join(tmp, "services", "services.go"), strings.Join([]string{
+	writeFile(t, filepath.Join(tmpRoot, "services", "services.go"), strings.Join([]string{
 		"package services",
 		"",
 		"import (",
@@ -75,7 +74,7 @@ func TestGeneratePackageGlueGen(t *testing.T) {
 		"}",
 	}, "\n"))
 
-	writeFile(t, filepath.Join(tmp, "services", "services_test.go"), strings.Join([]string{
+	writeFile(t, filepath.Join(tmpRoot, "services", "services_test.go"), strings.Join([]string{
 		"package services",
 		"",
 		"import (",
@@ -105,15 +104,15 @@ func TestGeneratePackageGlueGen(t *testing.T) {
 	}, "\n"))
 
 	result, err := Generate(Options{
-		Dir:      tmp,
-		Patterns: []string{"./..."},
+		Dir:      repoRoot,
+		Patterns: []string{"./" + filepath.ToSlash(relPkgDir)},
 		Write:    true,
 	})
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
 
-	genPath := filepath.Join(tmp, "services", generatedFileName)
+	genPath := filepath.Join(tmpRoot, "services", generatedFileName)
 	content, err := os.ReadFile(genPath)
 	if err != nil {
 		t.Fatalf("read generated file: %v", err)
@@ -133,26 +132,11 @@ func TestGeneratePackageGlueGen(t *testing.T) {
 		t.Fatalf("generated files = %v, want [%s]", result.Generated, genPath)
 	}
 
-	env := append(os.Environ(),
-		"GOPROXY=off",
-		"GOSUMDB=off",
-		"GOFLAGS=-mod=mod",
-	)
-
-	cmd := exec.Command("go", "mod", "tidy")
-	cmd.Dir = tmp
-	cmd.Env = env
+	cmd := exec.Command("go", "test", "./"+filepath.ToSlash(relPkgDir))
+	cmd.Dir = repoRoot
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("go mod tidy temp module failed: %v\n%s", err, string(out))
-	}
-
-	cmd = exec.Command("go", "test", "./...")
-	cmd.Dir = tmp
-	cmd.Env = env
-	out, err = cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("go test temp module failed: %v\n%s", err, string(out))
+		t.Fatalf("go test generated package failed: %v\n%s", err, string(out))
 	}
 }
 
