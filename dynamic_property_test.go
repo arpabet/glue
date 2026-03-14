@@ -127,3 +127,31 @@ func TestDynamicProperty_FuncT_RequiresDefault(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "default")
 }
+
+func TestDynamicProperty_FuncT_ErrorHandler(t *testing.T) {
+	// func() int with a non-numeric value should call the error handler, not panic
+	type cfg struct {
+		GetPort func() int `value:"app.port,default=8080"`
+	}
+
+	svc := &cfg{}
+	ctx, err := glue.New(svc)
+	require.NoError(t, err)
+	defer ctx.Close()
+
+	// set a value that can't be converted to int
+	ctx.Properties().Set("app.port", "not-a-number")
+
+	var handlerCalled bool
+	var handlerKey string
+	ctx.Properties().SetErrorHandler(func(key string, err error) {
+		handlerCalled = true
+		handlerKey = key
+	})
+
+	// should return zero value and call error handler, not panic
+	result := svc.GetPort()
+	require.Equal(t, 0, result)
+	require.True(t, handlerCalled)
+	require.Equal(t, "app.port", handlerKey)
+}

@@ -642,18 +642,24 @@ func (t *propInjectionDef) injectDynamic(field reflect.Value, properties Propert
 		})
 
 	default:
-		// func() T — default= is guaranteed at construction time, so resolve() always returns true.
+		// func() T — returns zero value on error and reports via properties error handler.
 		fn = reflect.MakeFunc(t.fieldType, func(args []reflect.Value) []reflect.Value {
 			str, ok, err := resolve()
 			if err != nil {
-				panic(fmt.Sprintf("property '%s' resolution error: %v", propertyName, err))
+				if cb := properties.GetErrorHandler(); cb != nil {
+					cb(propertyName, err)
+				}
+				return []reflect.Value{zeroReturn}
 			}
 			if !ok {
 				return []reflect.Value{zeroReturn}
 			}
 			val, err := convert(str)
 			if err != nil {
-				panic(fmt.Sprintf("property '%s' convert error: %v", propertyName, err))
+				if cb := properties.GetErrorHandler(); cb != nil {
+					cb(propertyName, err)
+				}
+				return []reflect.Value{zeroReturn}
 			}
 			return []reflect.Value{val}
 		})
