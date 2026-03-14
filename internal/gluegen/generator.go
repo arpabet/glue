@@ -42,11 +42,25 @@ type listedPackage struct {
 	GoFiles    []string
 }
 
+type decoratorMethod struct {
+	Name    string
+	Params  string // e.g. "ctx context.Context, id string"
+	Results string // e.g. "(User, error)"
+	Args    string // e.g. "ctx, id"
+}
+
+type decoratorSpec struct {
+	Name    string
+	Methods []decoratorMethod
+}
+
 type packageSpec struct {
 	Dir        string
 	Name       string
 	ImportPath string
 	Types      []string
+	Decorators []decoratorSpec
+	Imports    []string
 }
 
 func Generate(opts Options) (Result, error) {
@@ -142,6 +156,8 @@ func listPackages(dir string, patterns []string) ([]listedPackage, error) {
 func inspectPackage(pkg listedPackage) (packageSpec, bool, error) {
 	fset := token.NewFileSet()
 	candidates := make(map[string]struct{})
+	var decorators []decoratorSpec
+	importsNeeded := make(map[string]struct{})
 
 	for _, name := range pkg.GoFiles {
 		if name == generatedFileName {
@@ -151,6 +167,20 @@ func inspectPackage(pkg listedPackage) (packageSpec, bool, error) {
 		file, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 		if err != nil {
 			return packageSpec{}, false, fmt.Errorf("parse %s: %w", filename, err)
+		}
+
+		// build import map for this file: alias/name -> import path
+		fileImports := make(map[string]string)
+		for _, imp := range file.Imports {
+			path := strings.Trim(imp.Path.Value, `"`)
+			var name string
+			if imp.Name != nil {
+				name = imp.Name.Name
+			} else {
+				parts := strings.Split(path, "/")
+				name = parts[len(parts)-1]
+			}
+			fileImports[name] = path
 		}
 
 		for _, decl := range file.Decls {
@@ -163,6 +193,21 @@ func inspectPackage(pkg listedPackage) (packageSpec, bool, error) {
 				if !ok {
 					continue
 				}
+
+				// check for interface with //glue:decorator
+				if ifaceType, ok := typeSpec.Type.(*ast.InterfaceType); ok {
+					if hasDecoratorMarker(gen.Doc) || hasDecoratorMarker(typeSpec.Doc) {
+						ds, refs := extractDecoratorSpec(typeSpec.Name.Name, ifaceType, fset)
+						decorators = append(decorators, ds)
+						for _, ref := range refs {
+							if imp, ok := fileImports[ref]; ok {
+								importsNeeded[imp] = struct{}{}
+							}
+						}
+					}
+					continue
+				}
+
 				structType, ok := typeSpec.Type.(*ast.StructType)
 				if !ok {
 					continue
@@ -174,7 +219,7 @@ func inspectPackage(pkg listedPackage) (packageSpec, bool, error) {
 		}
 	}
 
-	if len(candidates) == 0 {
+	if len(candidates) == 0 && len(decorators) == 0 {
 		return packageSpec{}, false, nil
 	}
 
@@ -184,11 +229,23 @@ func inspectPackage(pkg listedPackage) (packageSpec, bool, error) {
 	}
 	sort.Strings(types)
 
+	sort.Slice(decorators, func(i, j int) bool {
+		return decorators[i].Name < decorators[j].Name
+	})
+
+	var imports []string
+	for imp := range importsNeeded {
+		imports = append(imports, imp)
+	}
+	sort.Strings(imports)
+
 	return packageSpec{
 		Dir:        pkg.Dir,
 		Name:       pkg.Name,
 		ImportPath: pkg.ImportPath,
 		Types:      types,
+		Decorators: decorators,
+		Imports:    imports,
 	}, true, nil
 }
 
@@ -250,6 +307,152 @@ func isGlueTypeName(name string) bool {
 	}
 }
 
+func hasDecoratorMarker(group *ast.CommentGroup) bool {
+	if group == nil {
+		return false
+	}
+	for _, comment := range group.List {
+		text := strings.TrimSpace(strings.TrimPrefix(comment.Text, "//"))
+		if strings.HasPrefix(text, "glue:decorator") {
+			return true
+		}
+	}
+	return false
+}
+
+func extractDecoratorSpec(name string, iface *ast.InterfaceType, fset *token.FileSet) (decoratorSpec, []string) {
+	var methods []decoratorMethod
+	var pkgRefs []string
+
+	for _, field := range iface.Methods.List {
+		funcType, ok := field.Type.(*ast.FuncType)
+		if !ok || len(field.Names) == 0 {
+			continue
+		}
+
+		methodName := field.Names[0].Name
+		params, paramArgs, paramRefs := formatFieldList(funcType.Params)
+		results, resultRefs := formatResults(funcType.Results)
+
+		pkgRefs = append(pkgRefs, paramRefs...)
+		pkgRefs = append(pkgRefs, resultRefs...)
+
+		methods = append(methods, decoratorMethod{
+			Name:    methodName,
+			Params:  params,
+			Results: results,
+			Args:    paramArgs,
+		})
+	}
+
+	return decoratorSpec{Name: name, Methods: methods}, pkgRefs
+}
+
+func formatFieldList(fields *ast.FieldList) (params string, args string, pkgRefs []string) {
+	if fields == nil || len(fields.List) == 0 {
+		return "", "", nil
+	}
+
+	var paramParts []string
+	var argParts []string
+	argIdx := 0
+
+	for _, field := range fields.List {
+		typeStr := exprToString(field.Type)
+		refs := collectPkgRefs(field.Type)
+		pkgRefs = append(pkgRefs, refs...)
+
+		if len(field.Names) == 0 {
+			name := fmt.Sprintf("a%d", argIdx)
+			argIdx++
+			paramParts = append(paramParts, name+" "+typeStr)
+			argParts = append(argParts, name)
+		} else {
+			for _, n := range field.Names {
+				paramParts = append(paramParts, n.Name+" "+typeStr)
+				argParts = append(argParts, n.Name)
+			}
+		}
+	}
+
+	return strings.Join(paramParts, ", "), strings.Join(argParts, ", "), pkgRefs
+}
+
+func formatResults(fields *ast.FieldList) (string, []string) {
+	if fields == nil || len(fields.List) == 0 {
+		return "", nil
+	}
+
+	var parts []string
+	var pkgRefs []string
+
+	for _, field := range fields.List {
+		typeStr := exprToString(field.Type)
+		refs := collectPkgRefs(field.Type)
+		pkgRefs = append(pkgRefs, refs...)
+
+		if len(field.Names) > 0 {
+			for _, n := range field.Names {
+				parts = append(parts, n.Name+" "+typeStr)
+			}
+		} else {
+			parts = append(parts, typeStr)
+		}
+	}
+
+	if len(parts) == 1 && !strings.Contains(parts[0], " ") {
+		return parts[0], pkgRefs
+	}
+	return "(" + strings.Join(parts, ", ") + ")", pkgRefs
+}
+
+func exprToString(expr ast.Expr) string {
+	switch e := expr.(type) {
+	case *ast.Ident:
+		return e.Name
+	case *ast.SelectorExpr:
+		return exprToString(e.X) + "." + e.Sel.Name
+	case *ast.StarExpr:
+		return "*" + exprToString(e.X)
+	case *ast.ArrayType:
+		return "[]" + exprToString(e.Elt)
+	case *ast.MapType:
+		return "map[" + exprToString(e.Key) + "]" + exprToString(e.Value)
+	case *ast.InterfaceType:
+		return "interface{}"
+	case *ast.Ellipsis:
+		return "..." + exprToString(e.Elt)
+	case *ast.FuncType:
+		params, _, _ := formatFieldList(e.Params)
+		results, _ := formatResults(e.Results)
+		if results == "" {
+			return "func(" + params + ")"
+		}
+		return "func(" + params + ") " + results
+	default:
+		return "any"
+	}
+}
+
+func collectPkgRefs(expr ast.Expr) []string {
+	switch e := expr.(type) {
+	case *ast.SelectorExpr:
+		if ident, ok := e.X.(*ast.Ident); ok {
+			return []string{ident.Name}
+		}
+	case *ast.StarExpr:
+		return collectPkgRefs(e.X)
+	case *ast.ArrayType:
+		return collectPkgRefs(e.Elt)
+	case *ast.MapType:
+		refs := collectPkgRefs(e.Key)
+		return append(refs, collectPkgRefs(e.Value)...)
+	case *ast.Ellipsis:
+		return collectPkgRefs(e.Elt)
+	}
+	return nil
+}
+
 func findSpec(specs []packageSpec, dir string) (packageSpec, bool) {
 	for _, spec := range specs {
 		if spec.Dir == dir {
@@ -266,20 +469,105 @@ func render(spec packageSpec) ([]byte, error) {
 	buf.WriteString("package ")
 	buf.WriteString(spec.Name)
 	buf.WriteString("\n\n")
-	buf.WriteString("import \"go.arpabet.com/glue\"\n\n")
-	buf.WriteString("type glueGen struct{}\n\n")
-	buf.WriteString("func (g *glueGen) ScannerBeans() []any {\n")
-	buf.WriteString("\treturn []any{\n")
-	for _, typ := range spec.Types {
-		buf.WriteString("\t\tnew(")
-		buf.WriteString(typ)
-		buf.WriteString("),\n")
+
+	// imports
+	needsReflect := len(spec.Decorators) > 0
+	if len(spec.Types) > 0 || len(spec.Decorators) > 0 {
+		buf.WriteString("import (\n")
+		if len(spec.Types) > 0 || len(spec.Decorators) > 0 {
+			buf.WriteString("\t\"go.arpabet.com/glue\"\n")
+		}
+		if needsReflect {
+			buf.WriteString("\t\"reflect\"\n")
+		}
+		for _, imp := range spec.Imports {
+			buf.WriteString(fmt.Sprintf("\t%q\n", imp))
+		}
+		buf.WriteString(")\n\n")
 	}
-	buf.WriteString("\t}\n")
-	buf.WriteString("}\n\n")
-	buf.WriteString("func GlueGen() glue.Scanner {\n")
-	buf.WriteString("\treturn &glueGen{}\n")
-	buf.WriteString("}\n")
+
+	// scanner
+	if len(spec.Types) > 0 {
+		buf.WriteString("type glueGen struct{}\n\n")
+		buf.WriteString("func (g *glueGen) ScannerBeans() []any {\n")
+		buf.WriteString("\treturn []any{\n")
+		for _, typ := range spec.Types {
+			buf.WriteString("\t\tnew(")
+			buf.WriteString(typ)
+			buf.WriteString("),\n")
+		}
+		buf.WriteString("\t}\n")
+		buf.WriteString("}\n\n")
+		buf.WriteString("func GlueGen() glue.Scanner {\n")
+		buf.WriteString("\treturn &glueGen{}\n")
+		buf.WriteString("}\n")
+	}
+
+	// decorator proxies
+	for _, dec := range spec.Decorators {
+		proxyName := dec.Name + "Proxy"
+
+		// struct with function fields
+		buf.WriteString(fmt.Sprintf("\n// %s is a generated proxy for the %s interface.\n", proxyName, dec.Name))
+		buf.WriteString(fmt.Sprintf("// Each method delegates to its corresponding function field,\n"))
+		buf.WriteString(fmt.Sprintf("// which can be wrapped at runtime via reflect.MakeFunc.\n"))
+		buf.WriteString(fmt.Sprintf("type %s struct {\n", proxyName))
+		for _, m := range dec.Methods {
+			if m.Results == "" {
+				buf.WriteString(fmt.Sprintf("\tDo%s func(%s)\n", m.Name, m.Params))
+			} else {
+				buf.WriteString(fmt.Sprintf("\tDo%s func(%s) %s\n", m.Name, m.Params, m.Results))
+			}
+		}
+		buf.WriteString("}\n\n")
+
+		// delegating methods
+		for _, m := range dec.Methods {
+			if m.Results == "" {
+				buf.WriteString(fmt.Sprintf("func (p *%s) %s(%s) {\n", proxyName, m.Name, m.Params))
+				buf.WriteString(fmt.Sprintf("\tp.Do%s(%s)\n", m.Name, m.Args))
+			} else {
+				buf.WriteString(fmt.Sprintf("func (p *%s) %s(%s) %s {\n", proxyName, m.Name, m.Params, m.Results))
+				buf.WriteString(fmt.Sprintf("\treturn p.Do%s(%s)\n", m.Name, m.Args))
+			}
+			buf.WriteString("}\n\n")
+		}
+
+		// NewXxxProxy factory function
+		buf.WriteString(fmt.Sprintf("// New%s creates a proxy that delegates to the given target.\n", proxyName))
+		buf.WriteString(fmt.Sprintf("// Use Wrap%s to add interception.\n", proxyName))
+		buf.WriteString(fmt.Sprintf("func New%s(target %s) *%s {\n", proxyName, dec.Name, proxyName))
+		buf.WriteString(fmt.Sprintf("\treturn &%s{\n", proxyName))
+		for _, m := range dec.Methods {
+			buf.WriteString(fmt.Sprintf("\t\tDo%s: target.%s,\n", m.Name, m.Name))
+		}
+		buf.WriteString("\t}\n")
+		buf.WriteString("}\n\n")
+
+		// Wrap function using reflect.MakeFunc
+		buf.WriteString(fmt.Sprintf("// Wrap%s wraps all function fields with the given interceptor.\n", proxyName))
+		buf.WriteString(fmt.Sprintf("// The interceptor receives the method name, arguments, and a next\n"))
+		buf.WriteString(fmt.Sprintf("// function to call the original. It returns the results.\n"))
+		buf.WriteString(fmt.Sprintf("func Wrap%s(proxy *%s, interceptor func(method string, args []reflect.Value, next func([]reflect.Value) []reflect.Value) []reflect.Value) {\n", proxyName, proxyName))
+		buf.WriteString(fmt.Sprintf("\tv := reflect.ValueOf(proxy).Elem()\n"))
+		for _, m := range dec.Methods {
+			buf.WriteString(fmt.Sprintf("\t{\n"))
+			buf.WriteString(fmt.Sprintf("\t\tfield := v.FieldByName(%q)\n", "Do"+m.Name))
+			buf.WriteString(fmt.Sprintf("\t\torig := field.Interface()\n"))
+			buf.WriteString(fmt.Sprintf("\t\torigVal := reflect.ValueOf(orig)\n"))
+			buf.WriteString(fmt.Sprintf("\t\twrapped := reflect.MakeFunc(field.Type(), func(args []reflect.Value) []reflect.Value {\n"))
+			buf.WriteString(fmt.Sprintf("\t\t\treturn interceptor(%q, args, origVal.Call)\n", m.Name))
+			buf.WriteString(fmt.Sprintf("\t\t})\n"))
+			buf.WriteString(fmt.Sprintf("\t\tfield.Set(wrapped)\n"))
+			buf.WriteString(fmt.Sprintf("\t}\n"))
+		}
+		buf.WriteString("}\n")
+	}
+
+	// ensure glue import is used when only decorators exist
+	if len(spec.Types) == 0 && len(spec.Decorators) > 0 {
+		buf.WriteString("\nvar _ glue.Decorator = nil\n")
+	}
 
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {

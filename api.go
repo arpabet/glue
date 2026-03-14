@@ -632,6 +632,33 @@ type PrimaryBean interface {
 	IsPrimaryBean() bool
 }
 
+var DecoratorClass = reflect.TypeOf((*Decorator)(nil)).Elem()
+
+/*
+Decorator wraps an existing bean. Decorators are applied after all beans
+are created and injected but before PostConstruct.
+
+DecorateType returns the interface type this decorator wraps. All beans
+implementing that interface are passed to Decorate one by one.
+
+Decorate receives the original bean and returns the decorated version.
+The decorated value must implement the same interface.
+
+Multiple decorators for the same type are applied in OrderedBean order.
+*/
+type Decorator interface {
+
+	/*
+		DecorateType returns the type this decorator wraps.
+	*/
+	DecorateType() reflect.Type
+
+	/*
+		Decorate receives the original bean and returns the decorated version.
+	*/
+	Decorate(original any) (any, error)
+}
+
 var ResourceSourceClass = reflect.TypeOf((*ResourceSource)(nil))
 
 /**

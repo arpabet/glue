@@ -573,6 +573,14 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 	}
 
 	/**
+	Apply decorators
+	*/
+	if err := c.applyDecorators(); err != nil {
+		c.closeWithTimeout(DefaultCloseTimeout)
+		return nil, err
+	}
+
+	/**
 	PostConstruct beans
 	*/
 	if err := c.postConstruct(options.Context, primaryList, secondaryList); err != nil {
@@ -685,8 +693,8 @@ func registerBean(core map[reflect.Type][]*bean, localNames map[string][]*bean, 
 }
 
 func forEach(active map[string]struct{}, initialPos string, scan []any, cb func(i string, obj any) error) error {
-	// Use a map to track visited objects by their pointer address
-	visited := make(map[uintptr]bool)
+	// Use a map to track visited objects by their pointer address and type
+	visited := make(map[visitedKey]bool)
 
 	// Call helper function with visited map
 	return forEachRecursive(active, initialPos, scan, cb, visited)
@@ -753,7 +761,12 @@ func isProfileActive(active map[string]struct{}, profileExpression string) bool 
 	return false
 }
 
-func forEachRecursive(active map[string]struct{}, initialPos string, scan []any, cb func(i string, obj any) error, visited map[uintptr]bool) error {
+type visitedKey struct {
+	addr uintptr
+	typ  reflect.Type
+}
+
+func forEachRecursive(active map[string]struct{}, initialPos string, scan []any, cb func(i string, obj any) error, visited map[visitedKey]bool) error {
 	for j, item := range scan {
 
 		if item == nil {
@@ -762,16 +775,16 @@ func forEachRecursive(active map[string]struct{}, initialPos string, scan []any,
 
 		// Check if this is a pointer type that we can track
 		if isPointer(item) {
-			// Get the memory address as uintptr
-			addr := reflect.ValueOf(item).Pointer()
+			v := reflect.ValueOf(item)
+			key := visitedKey{addr: v.Pointer(), typ: v.Type()}
 
 			// Skip if already visited
-			if visited[addr] {
+			if visited[key] {
 				continue
 			}
 
 			// Mark as visited
-			visited[addr] = true
+			visited[key] = true
 		}
 
 		if profileBean, ok := item.(ProfileBean); ok {
