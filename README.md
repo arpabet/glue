@@ -55,6 +55,7 @@ Detailed documentation is organized under `docs/`:
 * [Properties and Resources](docs/06-properties-and-resources.md)
 * [Build and Benchmark](docs/07-build-and-benchmark.md)
 * [Gluegen](docs/08-gluegen.md)
+* [Dependency Graph](docs/09-dependency-graph.md)
 
 ## Highlights
 
@@ -70,6 +71,7 @@ Core features:
 * property sources, property resolvers, and resource sources
 * built-in `EnvPropertyResolver` for environment variable config (twelve-factor app)
 * per-container `ContainerLogger` with `WithLogger` option and parent inheritance
+* DOT-format dependency graph export via `Container.Graph()`
 
 Search constants:
 

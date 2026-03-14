@@ -11,3 +11,4 @@ Chapters:
 * [06 Properties and Resources](06-properties-and-resources.md)
 * [07 Build and Benchmark](07-build-and-benchmark.md)
 * [08 Gluegen](08-gluegen.md)
+* [09 Dependency Graph](09-dependency-graph.md)
