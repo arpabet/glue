@@ -27,7 +27,8 @@ type EnvPropertyResolver struct {
 	Prefix string
 
 	// ResolverPriority controls ordering among property resolvers.
-	// Default: 200 (higher than file-based properties at 100).
+	// Higher number means higher precedence. Default: 200.
+	// The built-in Properties store uses 100, so env values override file/map values by default.
 	ResolverPriority int
 
 	// KeyMapper overrides the default key-to-env-var conversion.

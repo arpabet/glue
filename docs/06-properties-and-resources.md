@@ -69,6 +69,13 @@ Typical use cases:
 * external configuration systems
 
 Resolvers are ordered by priority. Higher priority resolvers are checked first.
+Glue sorts resolvers in descending priority order and returns the first resolver that matches a key.
+
+Built-in priority baseline:
+* `Properties` in-memory/file-backed store: `100`
+* `EnvPropertyResolver`: `200`
+
+That means environment variables override values loaded from property files or maps by default.
 
 ### Built-in: EnvPropertyResolver
 
@@ -114,11 +121,37 @@ ctn, err := glue.New(
 )
 ```
 
-Priority: `EnvPropertyResolver` defaults to priority 200, which is higher than file-based properties (100). This means environment variables override file-based properties, following the twelve-factor app convention. Override with `ResolverPriority`:
+Priority:
+* higher number = higher precedence
+* Glue sorts resolvers from highest priority to lowest priority
+* lookup stops at the first resolver that returns a value
+* `EnvPropertyResolver` defaults to `200`
+* the built-in `Properties` store defaults to `100`
+
+So this order:
+
+```go
+props := glue.NewProperties()
+props.Set("app.port", "8080")
+
+ctn, err := glue.NewWithOptions([]glue.ContainerOption{
+    glue.WithProperties(props),
+}, &glue.EnvPropertyResolver{}, &config{})
+```
+
+means:
+* if `APP_PORT` exists, Glue returns that value first
+* otherwise Glue falls back to the property store value `8080`
+
+This follows common external-configuration practice where environment variables sit above file-based config. Spring Boot documents an ordered property-source chain where later sources override earlier ones, and SmallRye Config uses descending ordinals where higher ordinal sources win. The same rule applies in Glue: higher priority overrides lower priority.
+
+Override `ResolverPriority` when you want different precedence:
 
 ```go
 &glue.EnvPropertyResolver{ResolverPriority: 50} // lower than file properties
 ```
+
+With `ResolverPriority: 50`, the property file or map value wins first, and the environment is only used as a fallback.
 
 Full example:
 

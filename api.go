@@ -687,7 +687,7 @@ PropertyResolver interface used to enhance the Properties interface with additio
 type PropertyResolver interface {
 
 	/*
-		Priority in property resolving, it could be lower or higher than default one.
+		Priority defines resolver precedence. Higher priority is checked first.
 	*/
 	Priority() int
 
@@ -702,8 +702,8 @@ Use this bean to parse properties from file and place in container.
 Merge properties from multiple PropertySource files in to one Properties bean.
 For placeholder properties this bean used as a source of values.
 
-Internal property storage has default priority of property resolver.
-The higher priority look first.
+Internal property storage has default resolver priority 100.
+Higher priority resolvers are checked first.
 */
 
 const defaultPropertyResolverPriority = 100
