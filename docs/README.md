@@ -14,3 +14,8 @@ Chapters:
 * [09 Dependency Graph](09-dependency-graph.md)
 * [10 Decorators](10-decorators.md)
 * [11 Dynamic Properties](11-dynamic-properties.md)
+
+Examples:
+* [Web Application](../examples/webapp/) — full feature set demo
+* [Dynamic Secrets](../examples/secrets/) — EnumerablePropertyResolver + secret rotation
+* [Multi-Profile Bootstrap](../examples/profiles/) — profiles, conditions, child containers

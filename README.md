@@ -24,7 +24,7 @@ Glue uses reflection at container startup. Direct pointer wiring is relatively c
 | Property injection (static + dynamic func) | Yes | No | No | No |
 | Property prefix map (`value:"prefix=X"`) | Yes | No | No | No |
 | Property expressions (`${key:default}`) | Yes | No | No | No |
-| Env var resolver (built-in) | Yes | No | No | No |
+| Env var resolver (built-in + enumerable) | Yes | No | No | No |
 | Dynamic config via lazy properties | Yes | No | No | No |
 | Profiles with expressions | Yes | No | No | No |
 | Conditions | Yes | No | No | No |
@@ -106,7 +106,8 @@ Core features:
 * `singleton`, `prototype`, and `request` scopes
 * profiles and conditional bean registration
 * parent-child containers and lazy child containers
-* property sources, property resolvers, and resource sources
+* property sources, property resolvers, `EnumerablePropertyResolver` for key-discoverable resolvers, and resource sources
+* prefix map injection (`value:"prefix=X"`) for grouped configuration into `map[string]string`
 * `${key}` / `${key:default}` property expressions with raw and resolved access paths
 * built-in `EnvPropertyResolver` for environment variable config (twelve-factor app)
 * per-container `ContainerLogger` with `WithLogger` option and parent inheritance
@@ -127,6 +128,14 @@ const (
     SearchCurrentAndAllParents = -1
 )
 ```
+
+## Examples
+
+The `examples/` directory contains runnable sample applications:
+
+* **[webapp](examples/webapp/)** — HTTP server demonstrating the full feature set: profiles, request scope, decorators, prefix maps, dynamic properties, BeanPostProcessor for handler auto-registration, `Container.Graph()`, and graceful shutdown.
+* **[secrets](examples/secrets/)** — Dynamic secret-driven DB client with a custom `EnumerablePropertyResolver` backed by a mock secret store, live secret rotation via `func() (T, error)`, and `Container.Reload` for prefix map refresh.
+* **[profiles](examples/profiles/)** — Multi-profile bootstrap with `IfProfile`, profile expressions (`dev|staging`, `!prod`), `ConditionalBean`, parent-child container hierarchy, and collection injection.
 
 ## Build
 

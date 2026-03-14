@@ -76,11 +76,44 @@ type cfg struct {
 }
 ```
 
+### EnumerablePropertyResolver
+
+By default, prefix maps discover keys from the built-in property store (`PropertySource`, files, maps). A plain `PropertyResolver` cannot contribute keys because it only supports point lookups.
+
+To make a custom resolver's keys discoverable for prefix map binding, implement `EnumerablePropertyResolver`:
+
+```go
+type EnumerablePropertyResolver interface {
+    PropertyResolver
+    Keys() []string
+}
+```
+
+Example — a secret store whose keys are known:
+
+```go
+type vaultResolver struct {
+    secrets map[string]string
+}
+
+func (r *vaultResolver) Priority() int                    { return 500 }
+func (r *vaultResolver) GetProperty(key string) (string, bool) { v, ok := r.secrets[key]; return v, ok }
+func (r *vaultResolver) Keys() []string {
+    keys := make([]string, 0, len(r.secrets))
+    for k := range r.secrets { keys = append(keys, k) }
+    return keys
+}
+```
+
+The built-in `EnvPropertyResolver` implements `EnumerablePropertyResolver`. When registered, environment variables are discoverable for prefix maps. When `KeyMapper` is set, reverse mapping is not possible and `Keys()` returns nil.
+
+When multiple enumerable resolvers provide the same key, the value is resolved through the normal priority-ordered resolver chain — the highest-priority resolver wins.
+
 Rules:
 * The field type must be `map[string]string`; any other type is an error.
 * An empty prefix (`value:"prefix="`) is an error.
 * The map is a snapshot taken at construction time. Later calls to `Properties.Set(...)` do not update it. Use `Container.Reload(bean)` to re-capture.
-* Only properties loaded from `PropertySource`, files, or maps are enumerable. Properties served exclusively by external `PropertyResolver` implementations are not included because their key sets are not discoverable.
+* Keys are collected from the built-in property store and all registered `EnumerablePropertyResolver` instances. Plain `PropertyResolver` implementations that do not implement `EnumerablePropertyResolver` cannot contribute keys.
 
 ## Property Expressions
 
