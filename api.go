@@ -125,9 +125,6 @@ type Bean interface {
 
 type ContainerLogger interface {
 
-	// Enabled - return true if log is enabled
-	Enabled() bool
-
 	// Printf calls l.Output to print to the logger.
 	// Arguments are handled in the manner of [fmt.Printf].
 	Printf(format string, v ...any)

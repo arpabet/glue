@@ -70,6 +70,11 @@ type container struct {
 	properties Properties
 
 	/*
+		True if logger enabled
+	*/
+	loggerEnabled bool
+
+	/*
 		Never null container logger
 	*/
 	logger ContainerLogger
@@ -127,7 +132,7 @@ func buildContainerOptions(options []ContainerOption) ContainerOptions {
 		opts.ActiveProfiles = append([]string(nil), opts.ActiveProfiles...)
 	}
 	if opts.Logger == nil && verbose != nil {
-		opts.Logger = logAdapter{log: verbose}
+		opts.Logger = verbose
 	}
 	return opts
 }
@@ -214,6 +219,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 		}
 	}
 
+	hasLogger := options.Logger != nil
 	if options.Logger == nil {
 		options.Logger = nullLogger{}
 	}
@@ -225,6 +231,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 		ifaceCache:      ctorInterfaceCache(),
 		resourceSources: ctorResourceCache(),
 		properties:      options.Properties,
+		loggerEnabled:   hasLogger,
 		logger:          options.Logger,
 	}
 
@@ -329,7 +336,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			} else if isFactoryBean {
 				elemClassPtr = factoryBean.ObjectType()
 			}
-			if c.logger.Enabled() {
+			if c.loggerEnabled {
 				if isFactoryBean || isContextFactoryBean {
 					var info string
 					if (isContextFactoryBean && contextFactoryBean.Singleton()) || (!isContextFactoryBean && factoryBean.Singleton()) {
@@ -372,7 +379,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			if len(objBean.beanDef.fields) > 0 {
 				value := objBean.valuePtr.Elem()
 				for _, injectDef := range objBean.beanDef.fields {
-					if c.logger.Enabled() {
+					if c.loggerEnabled {
 						var attr []string
 						if injectDef.lazy {
 							attr = append(attr, "lazy")
@@ -1029,7 +1036,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 	_, isFactoryBean := bean.obj.(FactoryBean)
 	initializerWithContext, hasConstructorWithContext := bean.obj.(ContextInitializingBean)
 	initializer, hasConstructor := bean.obj.(InitializingBean)
-	if t.logger.Enabled() {
+	if t.loggerEnabled {
 		t.logger.Printf("%sConstruct Bean '%s' with type '%v', isFactoryBean=%v, hasFactory=%v, hasObject=%v, hasConstructor=%v\n", indent(len(stack)), bean.name, bean.beanDef.classPtr, isFactoryBean, bean.beenFactory != nil, bean.obj != nil, hasConstructor)
 	}
 
@@ -1051,7 +1058,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		if err := t.constructBean(ctx, factoryDep.factory.bean, append(stack, bean)); err != nil {
 			return err
 		}
-		if t.logger.Enabled() {
+		if t.loggerEnabled {
 			t.logger.Printf("%sFactoryDep (%v).Object()\n", indent(len(stack)+1), factoryDep.factory.factoryClassPtr)
 		}
 		bean, created, err := factoryDep.factory.ctor(ctx)
@@ -1059,7 +1066,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 			return errors.Errorf("factory ctor '%v' failed, %v", factoryDep.factory.factoryClassPtr, err)
 		}
 		if created {
-			if t.logger.Enabled() {
+			if t.loggerEnabled {
 				t.logger.Printf("%sDep Created Bean %s with type '%v' singleton=%v\n", indent(len(stack)+1), bean.name, bean.beanDef.classPtr, factoryDep.factory.singleton())
 			}
 		}
@@ -1079,7 +1086,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		if err := t.constructBean(ctx, bean.beenFactory.bean, append(stack, bean)); err != nil {
 			return err
 		}
-		if t.logger.Enabled() {
+		if t.loggerEnabled {
 			t.logger.Printf("%s(%v).Object()\n", indent(len(stack)), bean.beenFactory.factoryClassPtr)
 		}
 		_, _, err := bean.beenFactory.ctor(ctx) // always new
@@ -1096,7 +1103,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 	if len(bean.beanDef.properties) > 0 {
 		value := bean.valuePtr.Elem()
 		for _, propertyDef := range bean.beanDef.properties {
-			if t.logger.Enabled() {
+			if t.loggerEnabled {
 				if propertyDef.defaultValue != "" {
 					t.logger.Printf("%sProperty '%s' default '%s'\n", indent(len(stack)+1), propertyDef.propertyName, propertyDef.defaultValue)
 				} else {
@@ -1111,7 +1118,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 	}
 
 	if hasConstructorWithContext || hasConstructor {
-		if t.logger.Enabled() {
+		if t.loggerEnabled {
 			t.logger.Printf("%sPostConstruct Bean '%s' with type '%v'\n", indent(len(stack)), bean.name, bean.beanDef.classPtr)
 		}
 		if hasConstructorWithContext {
