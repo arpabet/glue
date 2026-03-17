@@ -703,7 +703,7 @@ type ResourceSource struct {
 var PropertySourceClass = reflect.TypeOf((*PropertySource)(nil))
 
 /*
-PropertySource is serving as a property placeholder of file if it's ending with ".properties", ".props", ".yaml" or ".yml".
+PropertySource is serving as a property placeholder of file if it's ending with ".properties", ".yaml", ".yml", ".json" or ".toml".
 */
 
 type PropertySource struct {

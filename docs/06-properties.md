@@ -109,7 +109,7 @@ ctn, err := glue.New(
 )
 ```
 
-Supported file formats: `.properties`, `.yaml`, `.yml`, `.json`.
+Supported file formats: `.properties`, `.yaml`, `.yml`, `.json`, `.toml`.
 
 File paths use a `source:path` prefix. Use `file:path` for OS filesystem files, or a `ResourceSource` name prefix for embedded resources.
 
