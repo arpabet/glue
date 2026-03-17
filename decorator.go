@@ -6,10 +6,9 @@
 package glue
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
-
-	"github.com/pkg/errors"
 )
 
 func (t *container) applyDecorators() error {
@@ -64,15 +63,15 @@ func (t *container) applyDecorators() error {
 
 				decorated, err := d.Decorate(oldObj)
 				if err != nil {
-					return errors.Errorf("decorator %T failed for bean '%s': %v", d, b.name, err)
+					return fmt.Errorf("decorator %T failed for bean '%s': %w", d, b.name, err)
 				}
 				if decorated == nil {
-					return errors.Errorf("decorator %T returned nil for bean '%s'", d, b.name)
+					return fmt.Errorf("decorator %T returned nil for bean '%s'", d, b.name)
 				}
 
 				decoratedType := reflect.TypeOf(decorated)
 				if !decoratedType.Implements(targetType) {
-					return errors.Errorf("decorated value from %T does not implement %v", d, targetType)
+					return fmt.Errorf("decorated value from %T does not implement %v", d, targetType)
 				}
 
 				t.logger.Printf("  Decorated bean '%s' (%v -> %v)\n", b.name, beanType, decoratedType)

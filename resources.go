@@ -1,9 +1,8 @@
 package glue
 
 import (
+	"fmt"
 	"net/http"
-
-	"github.com/pkg/errors"
 )
 
 /*
@@ -48,7 +47,7 @@ func newResourceSource(source *ResourceSource) *resourceSource {
 func (t *resourceSource) merge(other *ResourceSource) error {
 	for _, name := range other.AssetNames {
 		if _, ok := t.resources[name]; ok {
-			return errors.Errorf("resource '%s' already exist in container for resource source '%s'", name, other.Name)
+			return fmt.Errorf("resource '%s' already exist in container for resource source '%s'", name, other.Name)
 		}
 		t.resources[name] = resource{name: name, source: other.AssetFiles}
 	}

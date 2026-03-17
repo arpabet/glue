@@ -18,7 +18,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/pkg/errors"
 )
 
 var (
@@ -268,7 +267,7 @@ func selectSingleCandidate(fieldName string, class reflect.Type, list []*bean) (
 	for i := range list {
 		if list[i].primary {
 			if primaryIdx != -1 {
-				return nil, errors.Errorf(
+				return nil, fmt.Errorf(
 					"field '%s' in class '%v' cannot be injected: multiple candidates %+v contain multiple primary beans",
 					fieldName, class, list,
 				)
@@ -278,7 +277,7 @@ func selectSingleCandidate(fieldName string, class reflect.Type, list []*bean) (
 	}
 
 	if primaryIdx == -1 {
-		return nil, errors.Errorf(
+		return nil, fmt.Errorf(
 			"field '%s' in class '%v' cannot be injected with multiple candidates %+v",
 			fieldName, class, list,
 		)
@@ -297,7 +296,7 @@ func (t *injection) inject(deep []beanlist) error {
 
 	field := t.value.Field(t.injectionDef.fieldNum)
 	if !field.CanSet() {
-		return errors.Errorf("field '%s' in class '%v' is not public", t.injectionDef.fieldName, t.injectionDef.class)
+		return fmt.Errorf("field '%s' in class '%v' is not public", t.injectionDef.fieldName, t.injectionDef.class)
 	}
 
 	list = t.injectionDef.filterBeans(list)
@@ -305,9 +304,9 @@ func (t *injection) inject(deep []beanlist) error {
 	if len(list) == 0 {
 		if !t.injectionDef.optional {
 			if t.injectionDef.qualifier != "" {
-				return errors.Errorf("can not find candidates to inject the required field '%s' in class '%v' with qualifier '%s'", t.injectionDef.fieldName, t.injectionDef.class, t.injectionDef.qualifier)
+				return fmt.Errorf("can not find candidates to inject the required field '%s' in class '%v' with qualifier '%s'", t.injectionDef.fieldName, t.injectionDef.class, t.injectionDef.qualifier)
 			} else {
-				return errors.Errorf("can not find candidates to inject the required field '%s' in class '%v'", t.injectionDef.fieldName, t.injectionDef.class)
+				return fmt.Errorf("can not find candidates to inject the required field '%s' in class '%v'", t.injectionDef.fieldName, t.injectionDef.class)
 			}
 		}
 		return nil
@@ -370,7 +369,7 @@ func (t *injection) inject(deep []beanlist) error {
 						factory: impl.beenFactory,
 						injection: func(service *bean) error {
 							if visited[service.name] {
-								return errors.Errorf("can not inject duplicates '%s' to the map field '%s' in class '%v' by injecting factory bean '%v'", impl.name, t.injectionDef.fieldName, t.injectionDef.class, service.obj)
+								return fmt.Errorf("can not inject duplicates '%s' to the map field '%s' in class '%v' by injecting factory bean '%v'", impl.name, t.injectionDef.fieldName, t.injectionDef.class, service.obj)
 							}
 							visited[service.name] = true
 							field.SetMapIndex(reflect.ValueOf(service.name), service.valuePtr)
@@ -379,7 +378,7 @@ func (t *injection) inject(deep []beanlist) error {
 					})
 			} else {
 				if visited[impl.name] {
-					return errors.Errorf("can not inject duplicates '%s' to the map field '%s' in class '%v' by injecting impl '%v'", impl.name, t.injectionDef.fieldName, t.injectionDef.class, impl.obj)
+					return fmt.Errorf("can not inject duplicates '%s' to the map field '%s' in class '%v' by injecting impl '%v'", impl.name, t.injectionDef.fieldName, t.injectionDef.class, impl.obj)
 				}
 				visited[impl.name] = true
 				field.SetMapIndex(reflect.ValueOf(impl.name), impl.valuePtr)
@@ -401,7 +400,7 @@ func (t *injection) inject(deep []beanlist) error {
 
 	if impl.beenFactory != nil {
 		if t.injectionDef.lazy {
-			return errors.Errorf("lazy injection is not supported of type '%v' through factory '%v' in to '%v'", impl.beenFactory.factoryBean.ObjectType(), impl.beenFactory.factoryClassPtr, t.String())
+			return fmt.Errorf("lazy injection is not supported of type '%v' through factory '%v' in to '%v'", impl.beenFactory.factoryBean.ObjectType(), impl.beenFactory.factoryClassPtr, t.String())
 		}
 
 		// register factory dependency for 'inject.bean' that is using 'factory'
@@ -440,7 +439,7 @@ func (t *injectionDef) inject(value *reflect.Value, deep []beanlist) error {
 	field := value.Field(t.fieldNum)
 
 	if !field.CanSet() {
-		return errors.Errorf("field '%s' in class '%v' is not public", t.fieldName, t.class)
+		return fmt.Errorf("field '%s' in class '%v' is not public", t.fieldName, t.class)
 	}
 
 	list = t.filterBeans(list)
@@ -448,9 +447,9 @@ func (t *injectionDef) inject(value *reflect.Value, deep []beanlist) error {
 	if len(list) == 0 {
 		if !t.optional {
 			if t.qualifier != "" {
-				return errors.Errorf("can not find candidates to inject the required field '%s' in class '%v' with qualifier '%s'", t.fieldName, t.class, t.qualifier)
+				return fmt.Errorf("can not find candidates to inject the required field '%s' in class '%v' with qualifier '%s'", t.fieldName, t.class, t.qualifier)
 			} else {
-				return errors.Errorf("can not find candidates to inject the required field '%s' in class '%v'", t.fieldName, t.class)
+				return fmt.Errorf("can not find candidates to inject the required field '%s' in class '%v'", t.fieldName, t.class)
 			}
 		}
 		return nil
@@ -478,7 +477,7 @@ func (t *injectionDef) inject(value *reflect.Value, deep []beanlist) error {
 		for _, instance := range list {
 			if !instance.valuePtr.IsValid() {
 				if visited[instance.name] {
-					return errors.Errorf("can not inject duplicates '%s' to the map field '%s' in class '%v'", instance.name, t.fieldName, t.class)
+					return fmt.Errorf("can not inject duplicates '%s' to the map field '%s' in class '%v'", instance.name, t.fieldName, t.class)
 				}
 				visited[instance.name] = true
 				field.SetMapIndex(reflect.ValueOf(instance.name), instance.valuePtr)
@@ -494,14 +493,14 @@ func (t *injectionDef) inject(value *reflect.Value, deep []beanlist) error {
 	}
 
 	if impl.lifecycle != BeanInitialized {
-		return errors.Errorf("field '%s' in class '%v' can not be injected with non-initialized bean %+v", t.fieldName, t.class, impl)
+		return fmt.Errorf("field '%s' in class '%v' can not be injected with non-initialized bean %+v", t.fieldName, t.class, impl)
 	}
 
 	if impl.beenFactory != nil {
 
 		service, _, err := impl.beenFactory.ctor(context.Background())
 		if err != nil {
-			return errors.Errorf("field '%s' in class '%v' can not be injected because of factory bean %+v error, %v", t.fieldName, t.class, impl, err)
+			return fmt.Errorf("field '%s' in class '%v' can not be injected because of factory bean %+v error: %w", t.fieldName, t.class, impl, err)
 		}
 
 		impl = service
@@ -547,7 +546,7 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 	field := value.Field(t.fieldNum)
 
 	if !field.CanSet() {
-		return errors.Errorf("field '%s' in class '%v' is not public", t.fieldName, t.class)
+		return fmt.Errorf("field '%s' in class '%v' is not public", t.fieldName, t.class)
 	}
 
 	if t.isMapPrefix {
@@ -560,22 +559,22 @@ func (t *propInjectionDef) inject(value *reflect.Value, properties Properties) e
 
 	var strValue string
 	if value, ok, err := properties.Resolve(t.propertyName); err != nil {
-		return errors.Errorf("property '%s' in class '%v' resolution error, property resolvers %+v, %v", t.fieldName, t.class, properties.PropertyResolvers(), err)
+		return fmt.Errorf("property '%s' in class '%v' resolution error, property resolvers %+v: %w", t.fieldName, t.class, properties.PropertyResolvers(), err)
 	} else if ok {
 		strValue = value
 	} else if t.hasDefaultValue {
 		value, err := properties.ResolveText(t.defaultValue)
 		if err != nil {
-			return errors.Errorf("property '%s' in class '%v' default resolution error, property resolvers %+v, %v", t.fieldName, t.class, properties.PropertyResolvers(), err)
+			return fmt.Errorf("property '%s' in class '%v' default resolution error, property resolvers %+v: %w", t.fieldName, t.class, properties.PropertyResolvers(), err)
 		}
 		strValue = value
 	} else {
-		return errors.Errorf("property '%s' in class '%v' does not have the default value, and did not find in property resolvers %+v", t.fieldName, t.class, properties.PropertyResolvers())
+		return fmt.Errorf("property '%s' in class '%v' does not have the default value, and did not find in property resolvers %+v", t.fieldName, t.class, properties.PropertyResolvers())
 	}
 
 	v, err := convertProperty(strValue, t.fieldType, t.timeFormat)
 	if err != nil {
-		return errors.Errorf("property '%s' in class '%v' has convert error, property resolvers %+v, %v", t.fieldName, t.class, properties.PropertyResolvers(), err)
+		return fmt.Errorf("property '%s' in class '%v' has convert error, property resolvers %+v: %w", t.fieldName, t.class, properties.PropertyResolvers(), err)
 	}
 
 	field.Set(v)
@@ -789,17 +788,17 @@ func createScopedInstance(ctx context.Context, ctn *container, b *bean) (any, er
 
 	// Inject fields and properties via the container
 	if err := ctn.Inject(obj); err != nil {
-		return nil, errors.Errorf("scoped bean '%v' field injection failed: %v", b.beanDef.classPtr, err)
+		return nil, fmt.Errorf("scoped bean '%v' field injection failed: %w", b.beanDef.classPtr, err)
 	}
 
 	// Run PostConstruct — prefer context-aware variant
 	if init, ok := obj.(ContextInitializingBean); ok {
 		if err := init.PostConstruct(ctx); err != nil {
-			return nil, errors.Errorf("scoped bean '%v' PostConstruct(ctx) failed: %v", b.beanDef.classPtr, err)
+			return nil, fmt.Errorf("scoped bean '%v' PostConstruct(ctx) failed: %w", b.beanDef.classPtr, err)
 		}
 	} else if init, ok := obj.(InitializingBean); ok {
 		if err := init.PostConstruct(); err != nil {
-			return nil, errors.Errorf("scoped bean '%v' PostConstruct failed: %v", b.beanDef.classPtr, err)
+			return nil, fmt.Errorf("scoped bean '%v' PostConstruct failed: %w", b.beanDef.classPtr, err)
 		}
 	}
 

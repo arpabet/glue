@@ -11,7 +11,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 func beanType[T any]() reflect.Type {
@@ -23,18 +23,18 @@ func GetBean[T any](c Container) (T, error) {
 	typ := beanType[T]()
 	beans := c.Bean(typ, DefaultSearchLevel)
 	if len(beans) == 0 {
-		return zero, errors.Errorf("bean '%s' not found", typ)
+		return zero, fmt.Errorf("bean '%s' not found", typ)
 	}
 	if len(beans) > 1 {
-		return zero, errors.Errorf("bean '%s' is ambiguous", typ)
+		return zero, fmt.Errorf("bean '%s' is ambiguous", typ)
 	}
 	obj := beans[0].Object()
 	if obj == nil {
-		return zero, errors.Errorf("bean '%s' is not initialized", typ)
+		return zero, fmt.Errorf("bean '%s' is not initialized", typ)
 	}
 	value, ok := obj.(T)
 	if !ok {
-		return zero, errors.Errorf("bean '%s' of type '%T' cannot be converted to '%s'", typ, obj, typ)
+		return zero, fmt.Errorf("bean '%s' of type '%T' cannot be converted to '%s'", typ, obj, typ)
 	}
 	return value, nil
 }
@@ -67,7 +67,7 @@ func GetProperty[T any](c Container, key string) (T, error) {
 		return zero, err
 	}
 	if !ok {
-		return zero, errors.Errorf("property '%s' not found", key)
+		return zero, fmt.Errorf("property '%s' not found", key)
 	}
 	return convertPropertyValue[T](value)
 }

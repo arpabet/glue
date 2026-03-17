@@ -18,7 +18,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
+	"errors"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -314,7 +315,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 
 		defer func() {
 			if r := recover(); r != nil {
-				err = errors.Errorf("recover from object scan '%s' on error %v\n", classPtr.String(), r)
+				err = fmt.Errorf("recover from object scan '%s' on error %v\n", classPtr.String(), r)
 			}
 		}()
 
@@ -369,7 +370,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			if isFactoryBean || isContextFactoryBean {
 				elemClassKind := elemClassPtr.Kind()
 				if elemClassKind != reflect.Ptr && elemClassKind != reflect.Interface {
-					return errors.Errorf("factory bean '%v' on position '%s' can produce ptr or interface, but object type is '%v'", classPtr, pos, elemClassPtr)
+					return fmt.Errorf("factory bean '%v' on position '%s' can produce ptr or interface, but object type is '%v'", classPtr, pos, elemClassPtr)
 				}
 			}
 
@@ -413,7 +414,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 						case reflect.Interface:
 							interfaces[lookupType] = append(interfaces[lookupType], &injection{objBean, value, injectDef, c})
 						default:
-							return errors.Errorf("scoped field '%s' in '%v': return type '%v' must be pointer or interface", injectDef.fieldName, classPtr, lookupType)
+							return fmt.Errorf("scoped field '%s' in '%v': return type '%v' must be pointer or interface", injectDef.fieldName, classPtr, lookupType)
 						}
 					} else {
 						switch injectDef.fieldType.Kind() {
@@ -422,7 +423,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 						case reflect.Interface:
 							interfaces[injectDef.fieldType] = append(interfaces[injectDef.fieldType], &injection{objBean, value, injectDef, c})
 						default:
-							return errors.Errorf("injecting not a pointer or interface on field type '%v' at position '%s' in %v", injectDef.fieldType, pos, classPtr)
+							return fmt.Errorf("injecting not a pointer or interface on field type '%v' at position '%s' in %v", injectDef.fieldType, pos, classPtr)
 						}
 					}
 				}
@@ -472,7 +473,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			}
 
 		default:
-			return errors.Errorf("instance must be a pointer to a struct or interface (got '%s' at position '%s' of type '%v')", classPtr.Kind().String(), pos, classPtr)
+			return fmt.Errorf("instance must be a pointer to a struct or interface (got '%s' at position '%s' of type '%v')", classPtr.Kind().String(), pos, classPtr)
 		}
 
 		return nil
@@ -494,7 +495,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 
 			for _, inject := range injects {
 				if err := inject.inject(direct); err != nil {
-					return nil, errors.Errorf("required type '%s' injection error, %v", requiredType, err)
+					return nil, fmt.Errorf("required type '%s' injection error: %w", requiredType, err)
 				}
 			}
 
@@ -512,7 +513,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			}
 
 			if len(required) > 0 {
-				return nil, errors.Errorf("can not find candidates for '%v' reference bean required by '%+v'", requiredType, required)
+				return nil, fmt.Errorf("can not find candidates for '%v' reference bean required by '%+v'", requiredType, required)
 			}
 
 		}
@@ -538,7 +539,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			}
 
 			if len(required) > 0 {
-				return nil, errors.Errorf("can not find candidates for '%v' interface required by '%+v'", ifaceType, required)
+				return nil, fmt.Errorf("can not find candidates for '%v' interface required by '%+v'", ifaceType, required)
 			}
 
 			continue
@@ -549,7 +550,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 			c.logger.Printf("Inject '%v' by implementation '%+v' in to %+v\n", ifaceType, candidates, inject)
 
 			if err := inject.inject(candidates); err != nil {
-				return nil, errors.Errorf("interface '%s' injection error, %v", ifaceType, err)
+				return nil, fmt.Errorf("interface '%s' injection error: %w", ifaceType, err)
 			}
 
 		}
@@ -622,7 +623,7 @@ func (t *container) loadPropertiesFromFile(filePath string, file io.Reader) erro
 
 		holder := make(map[string]any)
 		if err := yaml.NewDecoder(file).Decode(holder); err != nil {
-			return errors.Errorf("failed to load properties form yaml file '%s', %v", filePath, err)
+			return fmt.Errorf("failed to load properties from yaml file '%s': %w", filePath, err)
 		}
 		t.properties.LoadMap(holder)
 		return nil
@@ -631,22 +632,22 @@ func (t *container) loadPropertiesFromFile(filePath string, file io.Reader) erro
 
 		data, err := io.ReadAll(file)
 		if err != nil {
-			return errors.Errorf("failed to read json file '%s', %v", filePath, err)
+			return fmt.Errorf("failed to read json file '%s': %w", filePath, err)
 		}
 		holder := make(map[string]any)
 		if err := json.Unmarshal(data, &holder); err != nil {
-			return errors.Errorf("failed to parse json file '%s', %v", filePath, err)
+			return fmt.Errorf("failed to parse json file '%s': %w", filePath, err)
 		}
 		t.properties.LoadMap(holder)
 		return nil
 
 	} else if strings.HasSuffix(filePath, ".properties") {
 		if err := t.properties.Load(file); err != nil {
-			return errors.Errorf("failed to load properties form properties file '%s', %v", filePath, err)
+			return fmt.Errorf("failed to load properties from properties file '%s': %w", filePath, err)
 		}
 		return nil
 	} else {
-		return errors.Errorf("unsupported properties file '%s'", filePath)
+		return fmt.Errorf("unsupported properties file '%s'", filePath)
 	}
 }
 
@@ -661,28 +662,28 @@ func (t *container) loadProperties(propertySources []*PropertySource) error {
 				filePath := source.File[len("file:"):]
 				file, err := os.Open(filePath)
 				if err != nil {
-					return errors.Errorf("i/o error with placeholder properties file '%s', %v", filePath, err)
+					return fmt.Errorf("i/o error with placeholder properties file '%s': %w", filePath, err)
 				}
 				err = t.loadPropertiesFromFile(filePath, file)
 				file.Close()
 				if err != nil {
-					return errors.Errorf("load error of placeholder properties file '%s', %v", filePath, err)
+					return fmt.Errorf("load error of placeholder properties file '%s': %w", filePath, err)
 				}
 
 			} else if resource, ok := t.Resource(source.File); ok {
 
 				file, err := resource.Open()
 				if err != nil {
-					return errors.Errorf("i/o error with placeholder properties resource '%s', %v", source, err)
+					return fmt.Errorf("i/o error with placeholder properties resource '%s': %w", source, err)
 				}
 				err = t.loadPropertiesFromFile(source.File, file)
 				file.Close()
 				if err != nil {
-					return errors.Errorf("load error of placeholder properties resource '%s', %v", source.File, err)
+					return fmt.Errorf("load error of placeholder properties resource '%s': %w", source.File, err)
 				}
 
 			} else {
-				return errors.Errorf("placeholder properties resource '%s' was not found", source.File)
+				return fmt.Errorf("placeholder properties resource '%s' was not found", source.File)
 			}
 		}
 
@@ -851,10 +852,10 @@ func forEachRecursive(active map[string]struct{}, initialPos string, scan []any,
 			}
 		case any:
 			if err := cb(pos, obj); err != nil {
-				return errors.Errorf("object '%v' error, %v", reflect.ValueOf(item).Type(), err)
+				return fmt.Errorf("object '%v' error: %w", reflect.ValueOf(item).Type(), err)
 			}
 		default:
-			return errors.Errorf("unknown object type '%v' on position '%s'", reflect.ValueOf(item).Type(), pos)
+			return fmt.Errorf("unknown object type '%v' on position '%s'", reflect.ValueOf(item).Type(), pos)
 		}
 	}
 	return nil
@@ -933,7 +934,7 @@ func (t *container) Inject(obj any) error {
 	}
 	classPtr := reflect.TypeOf(obj)
 	if classPtr.Kind() != reflect.Ptr {
-		return errors.Errorf("non-pointer instances are not allowed, type %v", classPtr)
+		return fmt.Errorf("non-pointer instances are not allowed, type %v", classPtr)
 	}
 	bd, err := cachedBeanDef(classPtr)
 	if err != nil {
@@ -947,7 +948,7 @@ func (t *container) Inject(obj any) error {
 			if inject.optional {
 				continue
 			}
-			return errors.Errorf("implementation not found for field '%s' with type '%v'", inject.fieldName, inject.fieldType)
+			return fmt.Errorf("implementation not found for field '%s' with type '%v'", inject.fieldName, inject.fieldType)
 		}
 		if err := inject.inject(&value, impl); err != nil {
 			return err
@@ -1025,7 +1026,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		if r := recover(); r != nil {
 			stack := make([]byte, 4096)
 			stack = stack[:runtime.Stack(stack, false)]
-			err = errors.Errorf("construct bean '%s' with type '%v' recovered with error %v, stacktrace: %s", bean.name, bean.beanDef.classPtr, r, stack)
+			err = fmt.Errorf("construct bean '%s' with type '%v' recovered with error %v, stacktrace: %s", bean.name, bean.beanDef.classPtr, r, stack)
 		}
 	}()
 
@@ -1044,7 +1045,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		for i, b := range stack {
 			if b == bean {
 				// cycle dependency detected
-				return errors.Errorf("detected cycle dependency %s", getStackInfo(append(stack[i:], bean), "->"))
+				return fmt.Errorf("detected cycle dependency %s", getStackInfo(append(stack[i:], bean), "->"))
 			}
 		}
 	}
@@ -1063,7 +1064,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		}
 		bean, created, err := factoryDep.factory.ctor(ctx)
 		if err != nil {
-			return errors.Errorf("factory ctor '%v' failed, %v", factoryDep.factory.factoryClassPtr, err)
+			return fmt.Errorf("factory ctor '%v' failed: %w", factoryDep.factory.factoryClassPtr, err)
 		}
 		if created {
 			if t.loggerEnabled {
@@ -1072,7 +1073,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		}
 		err = factoryDep.injection(bean)
 		if err != nil {
-			return errors.Errorf("factory injection '%v' failed, %v", factoryDep.factory.factoryClassPtr, err)
+			return fmt.Errorf("factory injection '%v' failed: %w", factoryDep.factory.factoryClassPtr, err)
 		}
 	}
 
@@ -1091,10 +1092,10 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		}
 		_, _, err := bean.beenFactory.ctor(ctx) // always new
 		if err != nil {
-			return errors.Errorf("factory ctor '%v' failed, %v", bean.beenFactory.factoryClassPtr, err)
+			return fmt.Errorf("factory ctor '%v' failed: %w", bean.beenFactory.factoryClassPtr, err)
 		}
 		if bean.obj == nil {
-			return errors.Errorf("bean '%v' was not created by factory ctor '%v'", bean, bean.beenFactory.factoryClassPtr)
+			return fmt.Errorf("bean '%v' was not created by factory ctor '%v'", bean, bean.beenFactory.factoryClassPtr)
 		}
 		return nil
 	}
@@ -1112,7 +1113,7 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 			}
 			err = propertyDef.inject(&value, t.properties)
 			if err != nil {
-				return errors.Errorf("property '%s' injection in bean '%s' failed, %s, %v", propertyDef.propertyName, bean.name, getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
+				return fmt.Errorf("property '%s' injection in bean '%s' failed, %s: %w", propertyDef.propertyName, bean.name, getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
 			}
 		}
 	}
@@ -1123,11 +1124,11 @@ func (t *container) constructBean(ctx context.Context, bean *bean, stack []*bean
 		}
 		if hasConstructorWithContext {
 			if err := initializerWithContext.PostConstruct(ctx); err != nil {
-				return errors.Errorf("post construct failed %s, %v", getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
+				return fmt.Errorf("post construct failed %s: %w", getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
 			}
 		} else {
 			if err := initializer.PostConstruct(); err != nil {
-				return errors.Errorf("post construct failed %s, %v", getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
+				return fmt.Errorf("post construct failed %s: %w", getStackInfo(reverseStack(append(stack, bean)), " required by "), err)
 			}
 		}
 	}
@@ -1153,7 +1154,7 @@ func (t *container) postConstruct(ctx context.Context, lists ...[]*bean) (err er
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.Errorf("post construct recover on error, %v\n", r)
+			err = fmt.Errorf("post construct recover on error, %v\n", r)
 		}
 	}()
 
@@ -1176,7 +1177,7 @@ func (t *container) CloseWithContext(ctx context.Context) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.Errorf("container close recover error: %v", r)
+			err = fmt.Errorf("container close recover error: %v", r)
 		}
 	}()
 
@@ -1204,7 +1205,7 @@ func (t *container) destroyBean(ctx context.Context, b *bean) (err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.Errorf("destroy bean '%s' with type '%v' recovered with error: %v", b.name, b.beanDef.classPtr, r)
+			err = fmt.Errorf("destroy bean '%s' with type '%v' recovered with error: %v", b.name, b.beanDef.classPtr, r)
 		}
 	}()
 
@@ -1237,14 +1238,14 @@ func (t *container) Reload(b Bean) error {
 func (t *container) ReloadWithContext(ctx context.Context, b Bean) error {
 	bb, ok := b.(*bean)
 	if !ok {
-		return errors.Errorf("unsupported bean type %T", b)
+		return fmt.Errorf("unsupported bean type %T", b)
 	}
 
 	bb.ctorMu.Lock()
 	defer bb.ctorMu.Unlock()
 
 	if bb.beenFactory != nil {
-		return errors.Errorf("bean '%s' was created by factory bean '%v' and can not be reloaded", bb.name, bb.beenFactory.factoryClassPtr)
+		return fmt.Errorf("bean '%s' was created by factory bean '%v' and can not be reloaded", bb.name, bb.beenFactory.factoryClassPtr)
 	}
 
 	// destroy
@@ -1268,7 +1269,7 @@ func (t *container) ReloadWithContext(ctx context.Context, b Bean) error {
 				continue
 			}
 			if err := propDef.inject(&value, t.properties); err != nil {
-				return errors.Errorf("reload property '%s' in bean '%s' failed, %v", propDef.propertyName, bb.name, err)
+				return fmt.Errorf("reload property '%s' in bean '%s' failed: %w", propDef.propertyName, bb.name, err)
 			}
 		}
 	}
@@ -1295,7 +1296,7 @@ func multipleErr(err []error) error {
 	case 1:
 		return err[0]
 	default:
-		return errors.Errorf("multiple errors, %v", err)
+		return fmt.Errorf("multiple errors, %v", err)
 	}
 }
 

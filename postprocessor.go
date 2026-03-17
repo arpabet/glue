@@ -6,9 +6,8 @@
 package glue
 
 import (
+	"fmt"
 	"sort"
-
-	"github.com/pkg/errors"
 )
 
 func (t *container) applyPostProcessors() error {
@@ -50,7 +49,7 @@ func (t *container) applyPostProcessors() error {
 				}
 
 				if err := p.PostProcessBean(b.obj, b.name); err != nil {
-					return errors.Errorf("post-processor %T failed for bean '%s': %v", p, b.name, err)
+					return fmt.Errorf("post-processor %T failed for bean '%s': %w", p, b.name, err)
 				}
 			}
 		}

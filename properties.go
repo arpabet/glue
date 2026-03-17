@@ -17,7 +17,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/pkg/errors"
 )
 
 // Properties contains the key/value pairs from the properties input.
@@ -129,21 +128,21 @@ func (t *properties) Parse(content string) error {
 			continue
 		case itemKey:
 			if inside {
-				return errors.Errorf("key is not expected inside the property on key '%s'", key)
+				return fmt.Errorf("key is not expected inside the property on key '%s'", key)
 			}
 			key = item.val
 			inside = true
 		case itemValue:
 			if !inside {
-				return errors.Errorf("value is not expected outside of the property after key '%s'", key)
+				return fmt.Errorf("value is not expected outside of the property after key '%s'", key)
 			}
 			t.store[key] = item.val
 			inside = false
 		case itemError:
 			if inside {
-				return errors.Errorf("property parsing error on key '%s', %s", key, item.val)
+				return fmt.Errorf("property parsing error on key '%s', %s", key, item.val)
 			} else {
-				return errors.Errorf("property parsing error after key '%s', %s", key, item.val)
+				return fmt.Errorf("property parsing error after key '%s', %s", key, item.val)
 			}
 		}
 	}
@@ -414,7 +413,7 @@ func (t *properties) GetFileMode(key string, def os.FileMode) os.FileMode {
 func (t *properties) resolveKey(key string, stack []string) (string, bool, error) {
 	for _, item := range stack {
 		if item == key {
-			return "", false, errors.Errorf("circular property reference: %s", strings.Join(append(stack, key), " -> "))
+			return "", false, fmt.Errorf("circular property reference: %s", strings.Join(append(stack, key), " -> "))
 		}
 	}
 
@@ -447,19 +446,19 @@ func (t *properties) resolveText(text string, stack []string) (string, error) {
 
 		end := strings.IndexByte(text[start+2:], '}')
 		if end < 0 {
-			return "", errors.Errorf("unterminated property expression in '%s'", text)
+			return "", fmt.Errorf("unterminated property expression in '%s'", text)
 		}
 		end += start + 2
 
 		expr := text[start+2 : end]
 		if expr == "" {
-			return "", errors.Errorf("empty property expression in '%s'", text)
+			return "", fmt.Errorf("empty property expression in '%s'", text)
 		}
 
 		key, def, hasDefault := strings.Cut(expr, ":")
 		key = strings.TrimSpace(key)
 		if key == "" {
-			return "", errors.Errorf("empty property expression in '%s'", text)
+			return "", fmt.Errorf("empty property expression in '%s'", text)
 		}
 
 		value, ok, err := t.resolveKey(key, stack)
@@ -468,7 +467,7 @@ func (t *properties) resolveText(text string, stack []string) (string, error) {
 		}
 		if !ok {
 			if !hasDefault {
-				return "", errors.Errorf("property '%s' not found", key)
+				return "", fmt.Errorf("property '%s' not found", key)
 			}
 			value, err = t.resolveText(def, stack)
 			if err != nil {
@@ -543,7 +542,7 @@ func parseBool(str string) (bool, error) {
 	case "0", "f", "F", "false", "FALSE", "False", "off", "OFF", "Off":
 		return false, nil
 	}
-	return false, errors.Errorf("invalid syntax '%s'", str)
+	return false, fmt.Errorf("invalid syntax '%s'", str)
 }
 
 /*

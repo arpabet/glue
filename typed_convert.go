@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 func convertPropertyValue[T any](s string) (T, error) {
@@ -81,7 +81,7 @@ func convertTypedString(s string, typ reflect.Type) (reflect.Value, error) {
 		}
 		return reflect.ValueOf(u).Convert(typ), nil
 	default:
-		return reflect.Zero(typ), errors.Errorf("unsupported property type %s", typ)
+		return reflect.Zero(typ), fmt.Errorf("unsupported property type %s", typ)
 	}
 }
 
@@ -103,7 +103,7 @@ func typedParseBool(str string) (bool, error) {
 	case "0", "f", "F", "false", "FALSE", "False", "off", "OFF", "Off":
 		return false, nil
 	}
-	return false, errors.Errorf("invalid syntax '%s'", str)
+	return false, fmt.Errorf("invalid syntax '%s'", str)
 }
 
 func typedParseFileMode(s string) os.FileMode {

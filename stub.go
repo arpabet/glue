@@ -9,7 +9,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 /**
@@ -83,7 +83,7 @@ func newInitializingBeanStub(name string) InitializingBean {
 }
 
 func (t *initializingBeanStub) PostConstruct() error {
-	return errors.Errorf("bean '%s' does not implement PostConstruct method, but has anonymous field InitializingBean", t.name)
+	return fmt.Errorf("bean '%s' does not implement PostConstruct method, but has anonymous field InitializingBean", t.name)
 }
 
 type contextInitializingBeanStub struct {
@@ -95,7 +95,7 @@ func newContextInitializingBeanStub(name string) ContextInitializingBean {
 }
 
 func (t *contextInitializingBeanStub) PostConstruct(context.Context) error {
-	return errors.Errorf("bean '%s' does not implement PostConstruct(ctx) method, but has anonymous field ContextInitializingBean", t.name)
+	return fmt.Errorf("bean '%s' does not implement PostConstruct(ctx) method, but has anonymous field ContextInitializingBean", t.name)
 }
 
 /**
@@ -111,7 +111,7 @@ func newDisposableBeanStub(name string) DisposableBean {
 }
 
 func (t *disposableBeanStub) Destroy() error {
-	return errors.Errorf("bean '%s' does not implement Destroy method, but has anonymous field DisposableBean", t.name)
+	return fmt.Errorf("bean '%s' does not implement Destroy method, but has anonymous field DisposableBean", t.name)
 }
 
 type contextDisposableBeanStub struct {
@@ -123,7 +123,7 @@ func newContextDisposableBeanStub(name string) ContextDisposableBean {
 }
 
 func (t *contextDisposableBeanStub) Destroy(context.Context) error {
-	return errors.Errorf("bean '%s' does not implement Destroy(ctx) method, but has anonymous field ContextDisposableBean", t.name)
+	return fmt.Errorf("bean '%s' does not implement Destroy(ctx) method, but has anonymous field ContextDisposableBean", t.name)
 }
 
 /**
@@ -140,7 +140,7 @@ func newFactoryBeanStub(name string, elemType reflect.Type) FactoryBean {
 }
 
 func (t *factoryBeanStub) Object() (any, error) {
-	return nil, errors.Errorf("bean '%s' does not implement Object method, but has anonymous field FactoryBean", t.name)
+	return nil, fmt.Errorf("bean '%s' does not implement Object method, but has anonymous field FactoryBean", t.name)
 }
 
 func (t *factoryBeanStub) ObjectType() reflect.Type {
@@ -165,7 +165,7 @@ func newContextFactoryBeanStub(name string, elemType reflect.Type) ContextFactor
 }
 
 func (t *contextFactoryBeanStub) Object(context.Context) (any, error) {
-	return nil, errors.Errorf("bean '%s' does not implement Object(ctx) method, but has anonymous field ContextFactoryBean", t.name)
+	return nil, fmt.Errorf("bean '%s' does not implement Object(ctx) method, but has anonymous field ContextFactoryBean", t.name)
 }
 
 func (t *contextFactoryBeanStub) ObjectType() reflect.Type {

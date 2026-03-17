@@ -14,7 +14,6 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/pkg/errors"
 )
 
 const (
@@ -306,7 +305,7 @@ func (t *factory) ctor(ctx context.Context) (*bean, bool, error) {
 	var b *bean
 
 	if len(t.instances) == 0 {
-		return nil, false, errors.Errorf("internal: element bean collection is empty for factory '%v'", t.factoryClassPtr)
+		return nil, false, fmt.Errorf("internal: element bean collection is empty for factory '%v'", t.factoryClassPtr)
 	}
 
 	if t.singleton() {
@@ -342,7 +341,7 @@ func (t *factory) ctor(ctx context.Context) (*bean, bool, error) {
 		obj, err = t.factoryBean.Object()
 	}
 	if err != nil {
-		return nil, false, errors.Errorf("factory bean '%v' failed to create bean '%v', %v", t.factoryClassPtr, t.objectType(), err)
+		return nil, false, fmt.Errorf("factory bean '%v' failed to create bean '%v': %w", t.factoryClassPtr, t.objectType(), err)
 	}
 
 	b.obj = obj
@@ -397,13 +396,13 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 				ContextFactoryBeanClass:
 				stubs = append(stubs, stubField{fieldIndex: j, fieldType: field.Type})
 			case ContainerClass:
-				return nil, errors.Errorf("exposing by anonymous field '%s' in '%v' interface glue.Container is not allowed", field.Name, classPtr)
+				return nil, fmt.Errorf("exposing by anonymous field '%s' in '%v' interface glue.Container is not allowed", field.Name, classPtr)
 			}
 		}
 
 		if valueTag, hasValueTag := field.Tag.Lookup("value"); hasValueTag {
 			if field.Anonymous {
-				return nil, errors.Errorf("injection to anonymous field '%s' in '%v' is not allowed", field.Name, classPtr)
+				return nil, fmt.Errorf("injection to anonymous field '%s' in '%v' is not allowed", field.Name, classPtr)
 			}
 			var propertyName string
 			var defaultValue string
@@ -431,16 +430,16 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 				}
 			}
 			if propertyName == "" {
-				return nil, errors.Errorf("empty property name in field '%s' with type '%v' on position %d in %v with 'value' tag", field.Name, field.Type, j, classPtr)
+				return nil, fmt.Errorf("empty property name in field '%s' with type '%v' on position %d in %v with 'value' tag", field.Name, field.Type, j, classPtr)
 			}
 			// detect prefix map injection: value:"prefix=db" on map[string]string
 			if strings.HasPrefix(propertyName, "prefix=") {
 				prefixValue := strings.TrimSpace(propertyName[len("prefix="):])
 				if prefixValue == "" {
-					return nil, errors.Errorf("empty prefix in field '%s' with type '%v' in %v with 'value' tag", field.Name, field.Type, classPtr)
+					return nil, fmt.Errorf("empty prefix in field '%s' with type '%v' in %v with 'value' tag", field.Name, field.Type, classPtr)
 				}
 				if field.Type.Kind() != reflect.Map || field.Type.Key().Kind() != reflect.String || field.Type.Elem().Kind() != reflect.String {
-					return nil, errors.Errorf("prefix map field '%s' in '%v' must be map[string]string", field.Name, classPtr)
+					return nil, fmt.Errorf("prefix map field '%s' in '%v' must be map[string]string", field.Name, classPtr)
 				}
 				properties = append(properties, &propInjectionDef{
 					class:        class,
@@ -471,7 +470,7 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 				funcReturnsError := ft.NumOut() == 2
 				funcTakesContext := ft.NumIn() == 1
 				if !funcReturnsError && !funcTakesContext && !hasDefaultValue {
-					return nil, errors.Errorf("dynamic value field '%s' in '%v': func() T requires a 'default' option since it cannot return an error", field.Name, classPtr)
+					return nil, fmt.Errorf("dynamic value field '%s' in '%v': func() T requires a 'default' option since it cannot return an error", field.Name, classPtr)
 				}
 				def.dynamic = true
 				def.funcTakesContext = funcTakesContext
@@ -485,7 +484,7 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 		injectTag, hasInjectTag := field.Tag.Lookup("inject")
 		if field.Tag == "inject" || hasInjectTag {
 			if field.Anonymous {
-				return nil, errors.Errorf("injection to anonymous field '%s' in '%v' is not allowed", field.Name, classPtr)
+				return nil, fmt.Errorf("injection to anonymous field '%s' in '%v' is not allowed", field.Name, classPtr)
 			}
 			var qualifier string
 			var optional bool
@@ -535,7 +534,7 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 			case "request":
 				scope = ScopeRequest
 			default:
-				return nil, errors.Errorf("unknown scope '%s' in field '%s' of '%v'", scopeStr, field.Name, classPtr)
+				return nil, fmt.Errorf("unknown scope '%s' in field '%s' of '%v'", scopeStr, field.Name, classPtr)
 			}
 
 			// Validate scoped injection: must be a function with correct signature
@@ -544,7 +543,7 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 			if scope != ScopeSingleton {
 				ft := field.Type
 				if ft.Kind() != reflect.Func {
-					return nil, errors.Errorf("field '%s' in '%v' with scope=%s must be a function type, got %v", field.Name, classPtr, scopeStr, ft)
+					return nil, fmt.Errorf("field '%s' in '%v' with scope=%s must be a function type, got %v", field.Name, classPtr, scopeStr, ft)
 				}
 				if err := validateScopeProviderFunc(field.Name, classPtr, ft, scope); err != nil {
 					return nil, err
@@ -565,18 +564,18 @@ func parseBeanDef(classPtr reflect.Type) (*beanDef, error) {
 				case reflect.Map:
 					fieldMap = true
 					if field.Type.Key().Kind() != reflect.String {
-						return nil, errors.Errorf("map must have string key to be injected for field type '%v' on position %d in %v with 'inject' tag", field.Type, j, classPtr)
+						return nil, fmt.Errorf("map must have string key to be injected for field type '%v' on position %d in %v with 'inject' tag", field.Type, j, classPtr)
 					}
 					fieldType = field.Type.Elem()
 					kind = fieldType.Kind()
 				}
 				if kind != reflect.Ptr && kind != reflect.Interface {
-					return nil, errors.Errorf("not a pointer or interface field type '%v' on position %d in %v with 'inject' tag", field.Type, j, classPtr)
+					return nil, fmt.Errorf("not a pointer or interface field type '%v' on position %d in %v with 'inject' tag", field.Type, j, classPtr)
 				}
 			} else {
 				// scoped providers must be functions; signature checked earlier
 				if kind != reflect.Func {
-					return nil, errors.Errorf("scoped field '%s' in '%v' must be a function, got '%v'", field.Name, classPtr, field.Type)
+					return nil, fmt.Errorf("scoped field '%s' in '%v' must be a function, got '%v'", field.Name, classPtr, field.Type)
 				}
 			}
 			def := &injectionDef{
@@ -656,7 +655,7 @@ func investigate(obj any, classPtr reflect.Type) (*bean, error) {
 //	func(container.Container) (T, error)
 func validateDynamicValueFunc(fieldName string, classPtr reflect.Type, ft reflect.Type) error {
 	bad := func(msg string) error {
-		return errors.Errorf("dynamic value field '%s' in '%v': %s", fieldName, classPtr, msg)
+		return fmt.Errorf("dynamic value field '%s' in '%v': %s", fieldName, classPtr, msg)
 	}
 	switch ft.NumIn() {
 	case 0:
@@ -689,7 +688,7 @@ func validateDynamicValueFunc(fieldName string, classPtr reflect.Type, ft reflec
 //	scope=request:   func(context.Context) (T, error)
 func validateScopeProviderFunc(fieldName string, classPtr reflect.Type, ft reflect.Type, scope BeanScope) error {
 	bad := func(msg string) error {
-		return errors.Errorf("scoped field '%s' in '%v' (scope=%s): %s", fieldName, classPtr, scope, msg)
+		return fmt.Errorf("scoped field '%s' in '%v' (scope=%s): %s", fieldName, classPtr, scope, msg)
 	}
 
 	// Must return exactly (T, error)
