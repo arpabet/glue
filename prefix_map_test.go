@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Karagatan LLC.
+ * Copyright (c) 2026 Karagatan LLC.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -615,8 +615,8 @@ func TestPrefixMap_EnumerableResolver_Basic(t *testing.T) {
 	resolver := &testEnumerableResolver{
 		priority: 300,
 		data: map[string]string{
-			"db.host": "resolver-host",
-			"db.port": "9999",
+			"db.host":  "resolver-host",
+			"db.port":  "9999",
 			"app.name": "myapp",
 		},
 	}

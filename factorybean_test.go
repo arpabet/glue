@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Karagatan LLC.
+ * Copyright (c) 2026 Karagatan LLC.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -305,9 +305,9 @@ var lifecycleProducedBeanClass = reflect.TypeOf((*lifecycleProducedBean)(nil))
 // the container DOES manage the factory's own lifecycle.
 type lifecycleFactory struct {
 	glue.FactoryBean
-	produced                *lifecycleProducedBean
-	factoryPostConstructed  int32
-	factoryDestroyed        int32
+	produced               *lifecycleProducedBean
+	factoryPostConstructed int32
+	factoryDestroyed       int32
 }
 
 func (t *lifecycleFactory) PostConstruct() error {

@@ -1,7 +1,7 @@
 //go:build go1.18
 
 /*
- * Copyright (c) 2025 Karagatan LLC.
+ * Copyright (c) 2026 Karagatan LLC.
  * SPDX-License-Identifier: BUSL-1.1
  */
 

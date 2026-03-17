@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Karagatan LLC.
+ * Copyright (c) 2026 Karagatan LLC.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -23,7 +23,7 @@ const (
 )
 
 const (
-	eof = -1
+	eof        = -1
 	whitespace = " \f\t"
 )
 
@@ -50,13 +50,13 @@ func (t item) String() string {
 type stateFn func(*lexer) stateFn
 
 type lexer struct {
-	input   string
-	state   stateFn
-	pos     int
-	start   int
-	width   int
-	runes   []rune
-	items   []item
+	input string
+	state stateFn
+	pos   int
+	start int
+	width int
+	runes []rune
+	items []item
 }
 
 func (t *lexer) next() rune {

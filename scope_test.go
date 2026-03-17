@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Karagatan LLC.
+ * Copyright (c) 2026 Karagatan LLC.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -140,10 +140,10 @@ type requestConsumer struct {
 }
 
 type requestScopedLifecycleBean struct {
-	initCtx      context.Context
-	destroyCtx   context.Context
-	initialized  bool
-	destroyed    bool
+	initCtx     context.Context
+	destroyCtx  context.Context
+	initialized bool
+	destroyed   bool
 }
 
 func (b *requestScopedLifecycleBean) PostConstruct(ctx context.Context) error {

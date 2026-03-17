@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Karagatan LLC.
+ * Copyright (c) 2026 Karagatan LLC.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,8 +7,8 @@ package glue_test
 
 import (
 	"errors"
-	"go.arpabet.com/glue"
 	"github.com/stretchr/testify/require"
+	"go.arpabet.com/glue"
 	"net/http"
 	"strings"
 	"testing"
@@ -25,13 +25,13 @@ func TestResourceMerge(t *testing.T) {
 
 	ctx, err := glue.New(
 		glue.ResourceSource{
-			Name: "resources",
-			AssetNames: []string{ "a.txt", "b/c.txt" },
+			Name:       "resources",
+			AssetNames: []string{"a.txt", "b/c.txt"},
 			AssetFiles: fileSystemStub{},
 		},
 		&glue.ResourceSource{
-			Name: "resources",
-			AssetNames: []string{ "d.txt", "f/g.txt" },
+			Name:       "resources",
+			AssetNames: []string{"d.txt", "f/g.txt"},
 			AssetFiles: fileSystemStub{},
 		},
 	)
@@ -39,7 +39,7 @@ func TestResourceMerge(t *testing.T) {
 	require.NoError(t, err)
 	defer ctx.Close()
 
-	validNames := []string {
+	validNames := []string{
 		"a.txt",
 		"b/c.txt",
 		"d.txt",
@@ -65,13 +65,13 @@ func TestResourceMergeConflict(t *testing.T) {
 
 	ctx, err := glue.New(
 		glue.ResourceSource{
-			Name: "resources",
-			AssetNames: []string{ "a.txt", "b/c.txt" },
+			Name:       "resources",
+			AssetNames: []string{"a.txt", "b/c.txt"},
 			AssetFiles: fileSystemStub{},
 		},
 		&glue.ResourceSource{
-			Name: "resources",
-			AssetNames: []string{ "a.txt" },
+			Name:       "resources",
+			AssetNames: []string{"a.txt"},
 			AssetFiles: fileSystemStub{},
 		},
 	)
@@ -87,8 +87,8 @@ func TestResourceParent(t *testing.T) {
 
 	parent, err := glue.New(
 		glue.ResourceSource{
-			Name: "resources",
-			AssetNames: []string{ "a.txt", "b/c.txt" },
+			Name:       "resources",
+			AssetNames: []string{"a.txt", "b/c.txt"},
 			AssetFiles: fileSystemStub{},
 		},
 	)
@@ -98,20 +98,20 @@ func TestResourceParent(t *testing.T) {
 
 	child, err := parent.Extend(
 		glue.ResourceSource{
-			Name: "resources",
-			AssetNames: []string{ "a.txt" },
+			Name:       "resources",
+			AssetNames: []string{"a.txt"},
 			AssetFiles: fileSystemStub{},
 		},
 		&glue.ResourceSource{
-			Name: "resources",
-			AssetNames: []string{ "d.txt", "f/g.txt" },
+			Name:       "resources",
+			AssetNames: []string{"d.txt", "f/g.txt"},
 			AssetFiles: fileSystemStub{},
 		},
 	)
 	require.NoError(t, err)
 	defer child.Close()
 
-	validNames := []string {
+	validNames := []string{
 		"a.txt",
 		"b/c.txt",
 		"d.txt",

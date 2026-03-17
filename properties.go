@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Karagatan LLC.
+ * Copyright (c) 2026 Karagatan LLC.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
-
 )
 
 // Properties contains the key/value pairs from the properties input.

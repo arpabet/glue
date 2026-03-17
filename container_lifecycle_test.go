@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Karagatan LLC.
+ * Copyright (c) 2026 Karagatan LLC.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -56,10 +56,10 @@ func (t *legacyBean) Destroy() error {
 
 // dualBean implements both context-aware and legacy interfaces
 type dualBean struct {
-	legacyCalled      bool
-	contextCalled     bool
-	legacyDestroyed   bool
-	contextDestroyed  bool
+	legacyCalled     bool
+	contextCalled    bool
+	legacyDestroyed  bool
+	contextDestroyed bool
 }
 
 func (t *dualBean) PostConstruct(ctx context.Context) error {
