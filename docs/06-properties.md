@@ -89,7 +89,7 @@ Dynamic properties re-resolve from the `Properties` object on each invocation, s
 Properties can be loaded from files or maps:
 
 ```go
-ctn, err := glue.New(
+c, err := glue.New(
     &glue.PropertySource{File: "file:config.properties"},
     &glue.PropertySource{Map: map[string]any{
         "server.host": "localhost",
@@ -102,7 +102,7 @@ ctn, err := glue.New(
 Shorthand forms:
 
 ```go
-ctn, err := glue.New(
+c, err := glue.New(
     glue.FilePropertySource("file:config.yaml"),
     glue.MapPropertySource{"server.host": "localhost"},
     &config{},
@@ -137,9 +137,10 @@ Resolvers are sorted by priority (higher is checked first). The default internal
 props := glue.NewProperties()
 props.Set("server.host", "0.0.0.0")
 
-ctn, err := glue.NewWithOptions([]glue.ContainerOption{
+c, err := glue.NewWithOptions(
     glue.WithProperties(props),
-}, &config{})
+    glue.WithBeans(&config{}),
+)
 ```
 
 ## Reload

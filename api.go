@@ -140,6 +140,7 @@ type ContainerOptions struct {
 	Context        context.Context
 	Properties     Properties
 	ActiveProfiles []string
+	Beans          []any
 	Logger         ContainerLogger
 }
 
@@ -164,6 +165,18 @@ func WithProfiles(profiles ...string) ContainerOption {
 			return
 		}
 		opts.ActiveProfiles = append([]string(nil), profiles...)
+	}
+}
+
+func WithBeans(scan ...any) ContainerOption {
+	return func(opts *ContainerOptions) {
+		opts.Beans = append(opts.Beans, scan...)
+	}
+}
+
+func WithScanner(scanner Scanner) ContainerOption {
+	return func(opts *ContainerOptions) {
+		opts.Beans = append(opts.Beans, scanner.ScannerBeans()...)
 	}
 }
 
@@ -196,7 +209,7 @@ type Container interface {
 	/*
 		ExtendWithOptions - creates a new container on top of beans from the current container with options
 	*/
-	ExtendWithOptions(options []ContainerOption, scan ...any) (Container, error)
+	ExtendWithOptions(options ...ContainerOption) (Container, error)
 
 	/*
 		Children - Returns list of ctx container inside the current container only

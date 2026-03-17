@@ -69,39 +69,39 @@ func main() {
 	}}
 
 	ctn, err := glue.NewWithOptions(
-		[]glue.ContainerOption{
-			glue.WithProfiles(profiles...),
-		},
-		baseProps,
+		glue.WithProfiles(profiles...),
+		glue.WithBeans(
+			baseProps,
 
-		// profile-specific properties
-		glue.IfProfile("dev", devProps),
-		glue.IfProfile("staging", stagingProps),
-		glue.IfProfile("prod", prodProps),
+			// profile-specific properties
+			glue.IfProfile("dev", devProps),
+			glue.IfProfile("staging", stagingProps),
+			glue.IfProfile("prod", prodProps),
 
-		// shared beans
-		&appInfo{},
-		&logger{},
+			// shared beans
+			&appInfo{},
+			&logger{},
 
-		// profile-selected database
-		glue.IfProfile("dev", &devDB{}),
-		glue.IfProfile("staging", &stagingDB{}),
-		glue.IfProfile("prod", &prodDB{}),
+			// profile-selected database
+			glue.IfProfile("dev", &devDB{}),
+			glue.IfProfile("staging", &stagingDB{}),
+			glue.IfProfile("prod", &prodDB{}),
 
-		// beans active in dev OR staging
-		glue.IfProfile("dev|staging", &debugEndpoint{}),
+			// beans active in dev OR staging
+			glue.IfProfile("dev|staging", &debugEndpoint{}),
 
-		// beans active only when prod is NOT active
-		&mockMetrics{},
+			// beans active only when prod is NOT active
+			&mockMetrics{},
 
-		// conditional bean: enabled by explicit feature flag
-		&experimentalFeature{enabled: contains(profiles, "experimental")},
+			// conditional bean: enabled by explicit feature flag
+			&experimentalFeature{enabled: contains(profiles, "experimental")},
 
-		// child container for plugin subsystem
-		glue.Child("plugins",
-			&pluginA{},
-			&pluginB{},
-			&pluginManager{},
+			// child container for plugin subsystem
+			glue.Child("plugins",
+				&pluginA{},
+				&pluginB{},
+				&pluginManager{},
+			),
 		),
 	)
 	if err != nil {

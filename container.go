@@ -88,26 +88,27 @@ type container struct {
 }
 
 func New(scan ...any) (Container, error) {
-	return NewWithOptions(nil, scan...)
+	return NewWithOptions(WithBeans(scan...))
 }
 
 func NewWithProfiles(activeProfiles []string, scan ...any) (Container, error) {
-	return NewWithOptions([]ContainerOption{WithProfiles(activeProfiles...)}, scan...)
+	return NewWithOptions(WithProfiles(activeProfiles...), WithBeans(scan...))
 }
 
 func NewWithContext(ctx context.Context, scan ...any) (Container, error) {
-	return NewWithOptions([]ContainerOption{WithContext(ctx)}, scan...)
+	return NewWithOptions(WithContext(ctx), WithBeans(scan...))
 }
 
 func NewWithProperties(ctx context.Context, properties Properties, scan ...any) (Container, error) {
-	return NewWithOptions([]ContainerOption{
+	return NewWithOptions(
 		WithContext(ctx),
 		WithProperties(properties),
-	}, scan...)
+		WithBeans(scan...),
+	)
 }
 
-func NewWithOptions(options []ContainerOption, scan ...any) (Container, error) {
-	return createContainer(nil, buildContainerOptions(options), scan)
+func NewWithOptions(options ...ContainerOption) (Container, error) {
+	return createContainer(nil, buildContainerOptions(options))
 }
 
 func defaultContainerOptions() ContainerOptions {
@@ -140,17 +141,14 @@ func buildContainerOptions(options []ContainerOption) ContainerOptions {
 }
 
 func (t *container) Extend(scan ...any) (Container, error) {
-	return t.ExtendWithOptions(nil, scan...)
+	return t.ExtendWithOptions(WithBeans(scan...))
 }
 
 func (t *container) ExtendWithContext(ctx context.Context, scan ...any) (Container, error) {
-	return t.ExtendWithOptions([]ContainerOption{WithContext(ctx)}, scan...)
+	return t.ExtendWithOptions(WithContext(ctx), WithBeans(scan...))
 }
 
-func (t *container) ExtendWithOptions(options []ContainerOption, scan ...any) (Container, error) {
-
-	properties := NewProperties()
-	properties.Extend(t.properties)
+func (t *container) ExtendWithOptions(options ...ContainerOption) (Container, error) {
 
 	opts := buildContainerOptions(options)
 	overrideProperties := false
@@ -166,10 +164,12 @@ func (t *container) ExtendWithOptions(options []ContainerOption, scan ...any) (C
 		}
 	}
 	if !overrideProperties {
-		opts.Properties = properties
+		childProperties := NewProperties()
+		childProperties.Extend(t.properties)
+		opts.Properties = childProperties
 	}
 
-	return createContainer(t, opts, scan)
+	return createContainer(t, opts)
 }
 
 func (t *container) Parent() (Container, bool) {
@@ -196,7 +196,7 @@ func getActiveProfiles(properties Properties) []string {
 	return profiles
 }
 
-func createContainer(parent *container, options ContainerOptions, scan []any) (c *container, err error) {
+func createContainer(parent *container, options ContainerOptions) (c *container, err error) {
 
 	core := make(map[reflect.Type][]*bean)
 	localNames := make(map[string][]*bean)
@@ -260,7 +260,7 @@ func createContainer(parent *container, options ContainerOptions, scan []any) (c
 	core[propertiesBean.beanDef.classPtr] = []*bean{propertiesBean}
 
 	// scan
-	err = forEach(active, "", scan, func(pos string, obj any) (err error) {
+	err = forEach(active, "", options.Beans, func(pos string, obj any) (err error) {
 
 		var resolver bool
 

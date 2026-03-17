@@ -41,7 +41,7 @@ type dbConfig struct {
     DB map[string]string `value:"prefix=db"`
 }
 
-ctn, err := glue.New(
+c, err := glue.New(
     &glue.PropertySource{Map: map[string]any{
         "db.host": "localhost",
         "db.port": "5432",
@@ -142,7 +142,7 @@ type config struct {
 To resolve an env-style placeholder like `${APP_PORT:8080}`, register `EnvPropertyResolver` with a strict match gate:
 
 ```go
-ctn, err := glue.New(
+c, err := glue.New(
     &glue.EnvPropertyResolver{
         MatchKey: glue.OnlyEnvStyle,
     },
@@ -178,7 +178,7 @@ For `.properties`, comment lines are accepted during parsing and ignored. Glue n
 Example:
 
 ```go
-ctn, err := glue.New(
+c, err := glue.New(
     glue.MapPropertySource{
         "app.host": "localhost",
         "app.port": 8080,
@@ -220,7 +220,7 @@ Basic usage:
 
 ```go
 // Properties are resolved from env vars automatically
-ctn, err := glue.New(
+c, err := glue.New(
     &glue.EnvPropertyResolver{},
     &config{},
 )
@@ -230,7 +230,7 @@ With a prefix to namespace env vars:
 
 ```go
 // "db.host" -> "MYAPP_DB_HOST"
-ctn, err := glue.New(
+c, err := glue.New(
     &glue.EnvPropertyResolver{Prefix: "MYAPP"},
     &config{},
 )
@@ -239,7 +239,7 @@ ctn, err := glue.New(
 With a custom key mapper for advanced mapping:
 
 ```go
-ctn, err := glue.New(
+c, err := glue.New(
     &glue.EnvPropertyResolver{
         KeyMapper: func(key string) string {
             return "CFG_" + strings.ToUpper(strings.ReplaceAll(key, ".", "__"))
@@ -252,7 +252,7 @@ ctn, err := glue.New(
 With a match gate to limit environment lookup to specific key patterns:
 
 ```go
-ctn, err := glue.New(
+c, err := glue.New(
     &glue.EnvPropertyResolver{
         MatchKey: glue.OnlyEnvStyle,
     },
@@ -281,9 +281,10 @@ So this order:
 props := glue.NewProperties()
 props.Set("app.port", "8080")
 
-ctn, err := glue.NewWithOptions([]glue.ContainerOption{
+c, err := glue.NewWithOptions(
     glue.WithProperties(props),
-}, &glue.EnvPropertyResolver{}, &config{})
+    glue.WithBeans(&glue.EnvPropertyResolver{}, &config{}),
+)
 ```
 
 means:
@@ -310,7 +311,7 @@ type appConfig struct {
 
 // APP_PORT=9090 in the environment
 cfg := &appConfig{}
-ctn, err := glue.New(&glue.EnvPropertyResolver{}, cfg)
+c, err := glue.New(&glue.EnvPropertyResolver{}, cfg)
 // cfg.Host = "localhost" (default, no env var set)
 // cfg.Port = 9090        (from APP_PORT env var)
 ```
@@ -337,7 +338,7 @@ glue.ResourceSource{
 Lookup example:
 
 ```go
-res, ok := ctn.Resource("assets:a.txt")
+res, ok := c.Resource("assets:a.txt")
 ```
 
 Resources with the same source name are merged unless the same resource path appears twice, in which case container creation fails.

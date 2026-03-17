@@ -29,7 +29,16 @@ func GlueGen() glue.Scanner
 Usage:
 
 ```go
-ctx, err := glue.New(
+c, err := glue.NewWithOptions(
+    glue.WithScanner(myapp.GlueGen()),
+    glue.WithScanner(mydb.GlueGen()),
+    glue.WithScanner(myhttp.GlueGen()),
+)
+```
+
+or 
+```go
+c, err := glue.New(
     myapp.GlueGen(),
     mydb.GlueGen(),
     myhttp.GlueGen(),

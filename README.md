@@ -71,12 +71,14 @@ Constructor variants:
 * `glue.NewWithContext(ctx, ...)`
 * `glue.NewWithProfiles([]string{"dev"}, ...)`
 * `glue.NewWithProperties(ctx, props, ...)`
-* `glue.NewWithOptions([]glue.ContainerOption{...}, ...)`
+* `glue.NewWithOptions(glue.WithBeans(...), ...)`
 
 Common options:
 * `glue.WithContext(ctx)`
 * `glue.WithProperties(props)`
 * `glue.WithProfiles("dev", "local")`
+* `glue.WithBeans(bean1, bean2, ...)` — register beans
+* `glue.WithScanner(scanner)` — unpack scanner beans
 * `glue.WithLogger(logger)` — per-container diagnostic logging via `ContainerLogger` interface
 
 ## Documentation

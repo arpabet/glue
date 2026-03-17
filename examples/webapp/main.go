@@ -45,42 +45,41 @@ func main() {
 	defer stop()
 
 	ctn, err := glue.NewWithOptions(
-		[]glue.ContainerOption{
-			glue.WithContext(ctx),
-			glue.WithProfiles(profiles...),
-			glue.WithLogger(&simpleLogger{}),
-		},
+		glue.WithContext(ctx),
+		glue.WithProfiles(profiles...),
+		glue.WithLogger(&simpleLogger{}),
+		glue.WithBeans(
+			// --- config ---
+			&glue.PropertySource{Map: map[string]any{
+				"app.name":            "glue-webapp",
+				"server.port":         "${APP_SERVER_PORT:8080}",
+				"server.read.timeout": "5s",
+				"db.driver":           "postgres",
+				"db.host":             "${APP_DB_HOST:localhost}",
+				"db.port":             "5432",
+				"db.name":             "${app.name}_db",
+				"db.pool.max":         "20",
+				"db.pool.min":         "5",
+				"db.pool.idle":        "10s",
+			}},
+			&glue.EnvPropertyResolver{Prefix: "APP"},
 
-		// --- config ---
-		&glue.PropertySource{Map: map[string]any{
-			"app.name":            "glue-webapp",
-			"server.port":         "${APP_SERVER_PORT:8080}",
-			"server.read.timeout": "5s",
-			"db.driver":           "postgres",
-			"db.host":             "${APP_DB_HOST:localhost}",
-			"db.port":             "5432",
-			"db.name":             "${app.name}_db",
-			"db.pool.max":         "20",
-			"db.pool.min":         "5",
-			"db.pool.idle":        "10s",
-		}},
-		&glue.EnvPropertyResolver{Prefix: "APP"},
+			// --- beans ---
+			&serverConfig{},
+			&handlerRegistrar{},
+			&serviceLoggingDecorator{},
+			&userServiceImpl{},
+			&txContext{}, // template for request-scoped instances
 
-		// --- beans ---
-		&serverConfig{},
-		&handlerRegistrar{},
-		&serviceLoggingDecorator{},
-		&userServiceImpl{},
-		&txContext{}, // template for request-scoped instances
+			// profile-selected database
+			glue.IfProfile("dev", &devDatabase{}),
+			glue.IfProfile("prod", &prodDatabase{}),
 
-		// profile-selected database
-		glue.IfProfile("dev", &devDatabase{}),
-		glue.IfProfile("prod", &prodDatabase{}),
-
-		// handlers
-		&healthHandler{},
-		&userHandler{},
-		&graphHandler{},
+			// handlers
+			&healthHandler{},
+			&userHandler{},
+			&graphHandler{},
+		),
 	)
 	if err != nil {
 		log.Fatalf("container creation failed: %v", err)

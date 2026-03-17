@@ -53,7 +53,7 @@ func TestBeanHelpers(t *testing.T) {
 func TestPropertyHelpers(t *testing.T) {
 	props := glue.NewProperties()
 	props.Set("app.port", "8080")
-	ctx, err := glue.NewWithOptions([]glue.ContainerOption{glue.WithProperties(props)})
+	ctx, err := glue.NewWithOptions(glue.WithProperties(props))
 	require.NoError(t, err)
 	defer ctx.Close()
 

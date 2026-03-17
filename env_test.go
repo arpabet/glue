@@ -152,9 +152,11 @@ func TestEnvPropertyResolver_WithPropertiesAndEnv(t *testing.T) {
 
 	cfg := &config{}
 	ctx, err := glue.NewWithOptions(
-		[]glue.ContainerOption{glue.WithProperties(props)},
-		&glue.EnvPropertyResolver{},
-		cfg,
+		glue.WithProperties(props),
+		glue.WithBeans(
+			&glue.EnvPropertyResolver{},
+			cfg,
+		),
 	)
 	require.NoError(t, err)
 	defer ctx.Close()
@@ -176,11 +178,13 @@ func TestEnvPropertyResolver_WithPropertiesAndStrictMatchKey(t *testing.T) {
 
 	cfg := &config{}
 	ctx, err := glue.NewWithOptions(
-		[]glue.ContainerOption{glue.WithProperties(props)},
-		&glue.EnvPropertyResolver{
-			MatchKey: glue.OnlyEnvStyle,
-		},
-		cfg,
+		glue.WithProperties(props),
+		glue.WithBeans(
+			&glue.EnvPropertyResolver{
+				MatchKey: glue.OnlyEnvStyle,
+			},
+			cfg,
+		),
 	)
 	require.NoError(t, err)
 	defer ctx.Close()

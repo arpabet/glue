@@ -13,7 +13,7 @@ child, err := parent.Extend(new(b))
 Related APIs:
 * `Extend(...)`
 * `ExtendWithContext(ctx, ...)`
-* `ExtendWithOptions(..., ...)`
+* `ExtendWithOptions(...ContainerOption)`
 
 Destroying the child does not destroy the parent.
 

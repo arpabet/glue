@@ -28,12 +28,14 @@ Constructor variants:
 * `glue.NewWithContext(ctx, ...)`
 * `glue.NewWithProperties(ctx, props, ...)`
 * `glue.NewWithProfiles([]string{"dev"}, ...)`
-* `glue.NewWithOptions([]glue.ContainerOption{...}, ...)`
+* `glue.NewWithOptions(glue.WithBeans(...), ...)`
 
 Common options:
 * `glue.WithContext(ctx)`
 * `glue.WithProperties(props)`
 * `glue.WithProfiles("dev", "local")`
+* `glue.WithBeans(bean1, bean2, ...)` — register beans
+* `glue.WithScanner(scanner)` — unpack scanner beans
 * `glue.WithLogger(logger)`
 
 ## Logging
@@ -55,9 +57,9 @@ The `Enabled()` method allows guarding expensive log argument evaluation. When `
 Pass a logger via the `WithLogger` container option:
 
 ```go
-ctn, err := glue.NewWithOptions(
-    []glue.ContainerOption{glue.WithLogger(myLogger)},
-    &myBean{},
+c, err := glue.NewWithOptions(
+    glue.WithLogger(myLogger),
+    glue.WithBeans(&myBean{}),
 )
 ```
 
@@ -81,8 +83,8 @@ Child containers created via `Extend` inherit the parent's logger unless overrid
 
 ```go
 parent, _ := glue.NewWithOptions(
-    []glue.ContainerOption{glue.WithLogger(myLogger)},
-    &parentBean{},
+    glue.WithLogger(myLogger),
+    glue.WithBeans(&parentBean{}),
 )
 // child inherits myLogger
 child, _ := parent.Extend(&childBean{})
@@ -105,11 +107,9 @@ func (a *slogAdapter) Println(v ...any) {
     a.logger.Info(fmt.Sprint(v...))
 }
 
-ctn, err := glue.NewWithOptions(
-    []glue.ContainerOption{
-        glue.WithLogger(&slogAdapter{logger: slog.Default()}),
-    },
-    &myBean{},
+c, err := glue.NewWithOptions(
+    glue.WithLogger(&slogAdapter{logger: slog.Default()}),
+    glue.WithBeans(&myBean{}),
 )
 ```
 
@@ -131,7 +131,7 @@ type AppConfig struct {
 }
 
 cfg := AppConfig{Host: "localhost", Port: 8080}
-ctn, err := glue.New(cfg, &myService{})
+c, err := glue.New(cfg, &myService{})
 ```
 
 The container allocates a pointer and copies the value, so the result is equivalent to passing `&cfg`. Since Go already copies the struct to the heap when boxing it as `any`, there is no extra overhead.
