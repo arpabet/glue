@@ -20,6 +20,7 @@ import (
 
 	"errors"
 
+	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v3"
 )
 
@@ -637,6 +638,15 @@ func (t *container) loadPropertiesFromFile(filePath string, file io.Reader) erro
 		holder := make(map[string]any)
 		if err := json.Unmarshal(data, &holder); err != nil {
 			return fmt.Errorf("failed to parse json file '%s': %w", filePath, err)
+		}
+		t.properties.LoadMap(holder)
+		return nil
+
+	} else if strings.HasSuffix(filePath, ".toml") {
+
+		holder := make(map[string]any)
+		if _, err := toml.NewDecoder(file).Decode(&holder); err != nil {
+			return fmt.Errorf("failed to load properties from toml file '%s': %w", filePath, err)
 		}
 		t.properties.LoadMap(holder)
 		return nil

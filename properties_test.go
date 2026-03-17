@@ -56,6 +56,18 @@ example:
   filemode: -rwxrwxr-x
 `
 
+var propertiesFileTOML = `
+[example]
+str = "string\n"
+int = 123
+bool = true
+float = 1.23
+double = 1.23
+duration = "300ms"
+time = "2022-10-22"
+filemode = "-rwxrwxr-x"
+`
+
 const expectedPropertiesNum = 8
 
 type beanWithProperties struct {
@@ -240,6 +252,7 @@ func TestPlaceholderProperties(t *testing.T) {
 
 	validatePropertiesFile(t, "application.properties", propertiesFile)
 	validatePropertiesFile(t, "application.yaml", propertiesFileYAML)
+	validatePropertiesFile(t, "application.toml", propertiesFileTOML)
 
 }
 
