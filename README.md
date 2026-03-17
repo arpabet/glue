@@ -148,6 +148,12 @@ make bench
 
 See [Build and Benchmark](docs/07-build-and-benchmark.md) for targets, benchmark coverage, complexity notes, and optimization guidance.
 
+## Citations
+
+Libraries that are using Glue:
+* (cligo)[https://github.com/arpabet/cligo]
+* (servion)[https://github.com/arpabet/servion]
+
 ## Contributions
 
 If you find a bug or issue, please create a ticket.
