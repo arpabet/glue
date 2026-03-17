@@ -151,8 +151,8 @@ See [Build and Benchmark](docs/07-build-and-benchmark.md) for targets, benchmark
 ## Citations
 
 Libraries that are using Glue:
-* (cligo)[https://github.com/arpabet/cligo]
-* (servion)[https://github.com/arpabet/servion]
+* [cligo](https://github.com/arpabet/cligo) - Command Line Interface Provider
+* [servion](https://github.com/arpabet/servion) - Web-Application Framework
 
 ## Contributions
 
